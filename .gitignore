@@ -1,0 +1,5 @@
+*.vbox
+*.pyc
+*.log
+.vagrant/*
+tests/*
