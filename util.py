@@ -2,6 +2,7 @@ import json, random, string
 from flask import request, abort
 
 from usermodel import UserModel
+from ordermodel import OrderModel
 
 
 def parse_req_body():
@@ -28,8 +29,12 @@ def auth():
 	return userid
 
 
-def adminAuth():
+def admin_auth():
 	userid = auth()
-	if userid != 0:
+	if userid != 1:
 		abort(401)
 	return userid
+
+
+def dump_orders(order_ids):
+	return '[' + ','.join(map(lambda order_id: str(OrderModel.fetch(order_id)), order_ids)) + ']'

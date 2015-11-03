@@ -58,7 +58,7 @@ def cart_error(error):
 def initialize_my_app():
 	# model classes and ORM settings
 	mysql_model_list = {'user': UserModel, 'food': FoodModel}
-	data_model_list = [CartModel]
+	data_model_list = [CartModel, OrderModel]
 
 	# initialize the indexes and data structure of model classes
 	current_app.datapool = {cls.__name__: dict() for cls in mysql_model_list.values()}
@@ -134,17 +134,51 @@ def new_carts_handler():
 def carts_handler(cart_id):
 	userid = auth()
 	data = parse_req_body()
-	food_id = data.get('food_id', '')
+	food_id = int(data.get('food_id', '-1'))
 	count = int(data.get('count', '0'))
 	cart = CartModel.fetch(cart_id)
 	if cart is None:
 		abort(404)
 	if cart.userid != userid:
 		return '{"code": "NOT_AUTHORIZED_TO_ACCESS_CART", "message": "无权限访问指定的篮子"}', 401
+	if FoodModel.fetch(food_id) is None:
+		return '{"code": "FOOD_NOT_EXISTS", "message": "food not exists"}', 404
 	ret = cart.add_food(food_id, count)
 	if ret is True:
 		return '', 204
 	return json.dumps(ret), 403
+
+
+@app.route('/orders', methods=['POST', 'GET'])
+def orders_handler():
+	userid = auth()
+	if request.method == 'POST':
+		# POST
+		data = parse_req_body()
+		cart_id = data.get('cart_id', '')
+		cart = CartModel.fetch(cart_id)
+		if (cart is None) or (cart.userid != userid):
+			return '{"code": "NOT_AUTHORIZED_TO_ACCESS_CART", "message": "cart not owned by user"}', 401
+		try:
+			order = OrderModel(cart.id)
+		except:
+			return '{"code": "ORDER_OUT_OF_LIMIT", "message": "order count exceed maximum limit"}', 403
+		return '{"id": "%s"}' % order.id, 200
+	else:
+		# GET
+		orderid = OrderModel.fetch_orderid_by_userid(userid)
+		if orderid is None:
+			return '[]', 200
+		else:
+			order = OrderModel.fetch(orderid)
+			return '[%s]' % str(order), 200
+
+
+@app.route('/orders', methods=['GET'])
+def admin_orders_handler():
+	admin_auth()
+	orderids = OrderModel.fetch_all_orderid()
+	return dump_orders(orderids), 200
 
 
 @app.route('/count', methods=['GET'])

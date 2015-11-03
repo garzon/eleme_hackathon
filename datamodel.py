@@ -26,4 +26,4 @@ class DataModel:
 	# ===============================================================================
 	@classmethod
 	def fetch(cls, id):
-		return current_app.datapool[cls.__name__].get(str(id))
+		return current_app.datapool[cls.__name__].get(str(id), None)
