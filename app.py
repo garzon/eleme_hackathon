@@ -10,20 +10,62 @@ from util import *
 
 from usermodel import UserModel
 from foodmodel import FoodModel
-
+from cartmodel import CartModel
 
 app = Flask(__name__)
+
+
+# Error handlers =====================================================================
+
+
+class SyntaxErrorException(ex.HTTPException):
+	code = 753
+	description = '{"message": "malformed json"}'
+
+
+abort.mapping[753] = SyntaxErrorException
+
+
+@app.errorhandler(753)
+def syntax_error(error):
+	return SyntaxErrorException.description, 753
+
+
+@app.errorhandler(400)
+def empty_req_error(error):
+	return '{"code": "EMPTY_REQUEST", "message": "empty request"}', 400
+
+
+@app.errorhandler(401)
+def token_error(error):
+	return '{"code": "INVALID_ACCESS_TOKEN", "message": "invalid access token"}', 401
+
+
+@app.errorhandler(403)
+def auth_error(error):
+	return '{"code": "USER_AUTH_FAIL", "message": "username or password incorrect"}', 403
+
+
+@app.errorhandler(404)
+def cart_error(error):
+	return '{"code": "CART_NOT_FOUND", "message": "篮子不存在"}', 404
+
+
+# ====================================================================================
 
 
 @app.before_first_request
 def initialize_my_app():
 	# model classes and ORM settings
 	mysql_model_list = {'user': UserModel, 'food': FoodModel}
+	data_model_list = [CartModel]
 
 	# initialize the indexes and data structure of model classes
 	current_app.datapool = {cls.__name__: dict() for cls in mysql_model_list.values()}
 	for modelclass in mysql_model_list.values():
 		modelclass.init_data_structure()
+	for datamodel in data_model_list:
+		datamodel.init_data_structure()
 
 	# connect to mysql
 	mysql_addr = os.getenv('DB_HOST', 'localhost')
@@ -44,45 +86,29 @@ def initialize_my_app():
 	# connection is useless now
 	mysql.close()
 
+	current_app.pv = 0   # for debug
+
+
+# Controllers ========================================================================
+
 
 @app.route('/')
 def hello_world():
-	return 'Hello World!'
-
-
-class SyntaxErrorException(ex.HTTPException):
-	code = 753
-	description = '{"message": "malformed json"}'
-
-
-abort.mapping[753] = SyntaxErrorException
-
-
-@app.errorhandler(753)
-def syntax_error(error):
-	return SyntaxErrorException.description, 753
-
-
-@app.errorhandler(401)
-def syntax_error(error):
-	return '{"code": "INVALID_ACCESS_TOKEN", "message": "无效的令牌"}', 401
+	return 'Hello World! %d' % current_app.pv
 
 
 @app.route('/login', methods=['POST'])
 def login_handler():
-	fail = (json.dumps({
-		"code": "USER_AUTH_FAIL",
-		"message": 'username or password incorrect'
-	}), 403)
-
 	data = parse_req_body()
 	try:
 		username = data['username']
 		password = data['password']
-	except: return fail
+	except:
+		abort(403)
 
 	user = UserModel.login(username, password)
-	if user is False: return fail
+	if user is False:
+		abort(403)
 	return (json.dumps({
 		"user_id": user.id,
 		"username": user.username,
@@ -94,12 +120,31 @@ def login_handler():
 def foods_handler():
 	auth()
 	ret = '[' + ','.join(map(lambda foodid: str(FoodModel.fetch(foodid)), current_app.datapool['FoodModel'])) + ']'
-	return (ret, 200)
+	return ret, 200
 
 
-@app.route('/carts/<cart_id>', methods=['POST', 'PATCH'])
+@app.route('/carts', methods=['POST'])
+def new_carts_handler():
+	userid = auth()
+	cart = CartModel(userid)
+	return '{"cart_id": "%s"}' % cart.id, 200
+
+
+@app.route('/carts/<cart_id>', methods=['PATCH'])
 def carts_handler(cart_id):
-	auth()
+	userid = auth()
+	data = parse_req_body()
+	food_id = data.get('food_id', '')
+	count = int(data.get('count', '0'))
+	cart = CartModel.fetch(cart_id)
+	if cart is None:
+		abort(404)
+	if cart.userid != userid:
+		return '{"code": "NOT_AUTHORIZED_TO_ACCESS_CART", "message": "无权限访问指定的篮子"}', 401
+	ret = cart.add_food(food_id, count)
+	if ret is True:
+		return '', 204
+	return json.dumps(ret), 403
 
 
 @app.route('/count', methods=['GET'])

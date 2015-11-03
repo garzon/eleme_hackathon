@@ -1,6 +1,4 @@
-from redisstring import RedisString
 from mysqlmodel import MysqlModel
-from flask import current_app
 
 
 class FoodModel(MysqlModel):
@@ -11,3 +9,10 @@ class FoodModel(MysqlModel):
 
 	def __str__(self):
 		return '{"id": %d, "price": %d, "stock": %d}' % (self.id, self.price, self.stock)
+
+	def reserve(self, count):
+		if self.stock >= count:
+			self.stock -= count
+			return True
+		else:
+			return False

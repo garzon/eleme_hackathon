@@ -1,4 +1,3 @@
-from redisstring import RedisString
 from mysqlmodel import MysqlModel
 from flask import current_app
 

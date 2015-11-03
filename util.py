@@ -5,6 +5,8 @@ from usermodel import UserModel
 
 
 def parse_req_body():
+	if request.data == '':
+		abort(400)
 	try:
 		return json.loads(request.data)
 	except:
@@ -27,7 +29,7 @@ def auth():
 
 
 def adminAuth():
-	user = auth()
-	if user != 0:
+	userid = auth()
+	if userid != 0:
 		abort(401)
-	return user
+	return userid
