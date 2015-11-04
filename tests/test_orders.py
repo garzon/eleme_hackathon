@@ -89,10 +89,10 @@ def test_order_consistency(url, new_token, make_order, price_of):
 
     assert (order["id"]) > 0
     assert len(order["items"]) == 1
-    o = order["items"]
+    o = order["items"][0]
     assert o["food_id"] == items["food_id"]
     assert o["count"] == items["count"]
-    assert order["total"] > price_of(items["food_id"]) * items["count"]
+    assert order["total"] >= price_of(items["food_id"]) * items["count"]
 
 
 def test_order_food_consistency(new_token, make_order, stock_of):
