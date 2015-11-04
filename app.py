@@ -188,7 +188,6 @@ def count_handler():
 	context.pv = count + 1
 	return str(count), 200
 
-
 if __name__ == '__main__':
 	host = os.getenv("APP_HOST", "localhost")
 	port = int(os.getenv("APP_PORT", "8080"))
