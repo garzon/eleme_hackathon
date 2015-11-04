@@ -134,7 +134,7 @@ def new_carts_handler():
 def carts_handler(cart_id):
 	userid = auth()
 	data = parse_req_body()
-	food_id = int(data.get('food_id', '-1'))
+	food_id = data.get('food_id', '-1')
 	count = int(data.get('count', '0'))
 	cart = CartModel.fetch(cart_id)
 	if cart is None:

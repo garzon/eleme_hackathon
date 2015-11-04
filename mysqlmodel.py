@@ -33,4 +33,4 @@ class MysqlModel:
 	@classmethod
 	def fetch(cls, id):
 		# TODO: load if the corresponding obj is not in the datapool
-		return current_app.datapool[cls.__name__][str(id)]
+		return current_app.datapool[cls.__name__].get(str(id), None)
