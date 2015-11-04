@@ -3,4 +3,5 @@ script:
   - sudo apt-get install mysql-server-5.5
   - pip install -r requirements.txt
   - sudo service mysql start
+  - /usr/local/bin/gendata
   - python app.py
