@@ -2,5 +2,6 @@ language: py2
 script:
   - sudo apt-get install mysql-server-5.5
   - pip install -r requirements.txt
+  - sudo service start mysql
   - python app.py
 
