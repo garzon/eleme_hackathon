@@ -11,7 +11,7 @@ class UserModel(MysqlModel):
 		self.token = None
 
 	def update_token(self):
-		if self.token is not None: del current_app.token2userid[self.token]
+		# if self.token is not None: del current_app.token2userid[self.token]
 		token = util.gen_random_string()
 		self.token = token
 		current_app.token2userid[token] = self.id
