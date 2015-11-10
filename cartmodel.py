@@ -24,7 +24,7 @@ class CartModel(DataModel):
 		if self.food_count + count > 3:
 			return {
 				"code": "FOOD_OUT_OF_LIMIT",
-				"message": "food count exceed maximum limit"
+				"message": "篮子中食物数量超过了三个"
 			}
 		# TODO: lock
 		food = FoodModel.fetch(id)

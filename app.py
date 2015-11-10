@@ -20,7 +20,7 @@ app = Flask(__name__)
 
 class SyntaxErrorException(ex.HTTPException):
 	code = 753
-	description = '{"message": "malformed json"}'
+	description = '{"code": "MALFORMED_JSON", "message": "格式错误"}'
 
 
 abort.mapping[753] = SyntaxErrorException
@@ -28,22 +28,22 @@ abort.mapping[753] = SyntaxErrorException
 
 @app.errorhandler(753)
 def syntax_error(error):
-	return SyntaxErrorException.description, 753
+	return SyntaxErrorException.description, 400
 
 
 @app.errorhandler(400)
 def empty_req_error(error):
-	return '{"code": "EMPTY_REQUEST", "message": "empty request"}', 400
+	return '{"code": "EMPTY_REQUEST", "message": "请求体为空"}', 400
 
 
 @app.errorhandler(401)
 def token_error(error):
-	return '{"code": "INVALID_ACCESS_TOKEN", "message": "invalid access token"}', 401
+	return '{"code": "INVALID_ACCESS_TOKEN", "message": "无效的令牌"}', 401
 
 
 @app.errorhandler(403)
 def auth_error(error):
-	return '{"code": "USER_AUTH_FAIL", "message": "username or password incorrect"}', 403
+	return '{"code": "USER_AUTH_FAIL", "message": "用户名或密码错误"}', 403
 
 
 @app.errorhandler(404)
@@ -142,7 +142,7 @@ def carts_handler(cart_id):
 	if cart.userid != userid:
 		return '{"code": "NOT_AUTHORIZED_TO_ACCESS_CART", "message": "无权限访问指定的篮子"}', 401
 	if FoodModel.fetch(food_id) is None:
-		return '{"code": "FOOD_NOT_EXISTS", "message": "food not exists"}', 404
+		return '{"code": "FOOD_NOT_FOUND", "message": "食物不存在"}', 404
 	ret = cart.add_food(food_id, count)
 	if ret is True:
 		return '', 204
@@ -162,7 +162,7 @@ def orders_handler():
 		try:
 			order = OrderModel(cart.id)
 		except:
-			return '{"code": "ORDER_OUT_OF_LIMIT", "message": "order count exceed maximum limit"}', 403
+			return '{"code": "ORDER_OUT_OF_LIMIT", "message": "每个用户只能下一单"}', 403
 		return '{"id": "%s"}' % order.id, 200
 	else:
 		# GET
