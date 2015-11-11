@@ -3,4 +3,4 @@
 *.log
 .vagrant/*
 tests/*
-
+*~
