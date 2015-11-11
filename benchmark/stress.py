@@ -113,7 +113,12 @@ class Query(object):
                             headers=headers)
         response = self.client.getresponse()
         status = response.status
-        data = response.read().decode("ascii")
+        data = response.read()
+	try:
+		data = data.decode("ascii")
+	except:
+		print(data)
+		exit()
         self.client.close()
         elapsed = time.time() - start
 
