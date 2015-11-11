@@ -1,2 +1,0 @@
-Modify this file to force it to run unit tests online.
-the mysql service is not stable.
