@@ -161,8 +161,11 @@ def orders_handler():
 			return '{"code": "NOT_AUTHORIZED_TO_ACCESS_CART", "message": "cart not owned by user"}', 401
 		try:
 			order = OrderModel(cart.id)
-		except:
-			return '{"code": "ORDER_OUT_OF_LIMIT", "message": "每个用户只能下一单"}', 403
+		except Exception as inst:
+			if inst.args[0] == 'outoflimit':
+				return '{"code": "ORDER_OUT_OF_LIMIT", "message": "每个用户只能下一单"}', 403
+			else:
+				return '{"code": "FOOD_OUT_OF_STOCK", "message": "食物库存不足"}', 403
 		return '{"id": "%s"}' % order.id, 200
 	else:
 		# GET
@@ -192,4 +195,4 @@ def count_handler():
 if __name__ == '__main__':
 	host = os.getenv("APP_HOST", "localhost")
 	port = int(os.getenv("APP_PORT", "8080"))
-	app.run(host=host, port=port, debug=True)
+	app.run(host=host, port=port)

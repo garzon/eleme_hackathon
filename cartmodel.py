@@ -14,6 +14,7 @@ class CartModel(DataModel):
 		self.food_count = 0
 		self.total = 0
 		self.is_locked = False
+		self.is_bad_order = False
 
 	def add_food(self, id, count):
 		if self.is_locked:
@@ -37,7 +38,5 @@ class CartModel(DataModel):
 				self.food_ids[id] = count
 			return True
 		else:
-			return {
-				"code": "FOOD_OUT_OF_STOCK",
-				"message": "食物库存不足"
-			}
+			self.is_bad_order = True
+			return True

@@ -18,6 +18,8 @@ class OrderModel(DataModel):
 
 	def __init__(self, cartid):
 		self.cart = CartModel.fetch(cartid)
+		if self.cart.is_bad_order == True:
+			raise Exception, "outofstock"
 		user_orders = current_app.userid2orders.get(self.cart.userid, None)
 		if user_orders is None:
 			self.cart.is_locked = True
@@ -25,7 +27,7 @@ class OrderModel(DataModel):
 			self.cartid = cartid
 			current_app.userid2orders[self.cart.userid] = self.id
 		else:
-			raise Exception
+			raise Exception, "outoflimit"
 
 	@classmethod
 	def fetch_orderid_by_userid(cls, userid):
