@@ -177,7 +177,7 @@ def orders_handler():
 			return '[%s]' % str(order), 200
 
 
-@app.route('/orders', methods=['GET'])
+@app.route('/admin/orders', methods=['GET'])
 def admin_orders_handler():
 	admin_auth()
 	orderids = OrderModel.fetch_all_orderid()
