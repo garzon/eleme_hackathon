@@ -5,43 +5,58 @@ from flask import current_app
 from datamodel import DataModel
 from cartmodel import CartModel
 
+from redisstring import RedisString
+from redisset import RedisSet
+
 import json
 
 
 class OrderModel(DataModel):
-	colmap = ['id', 'cartid']
+	OUT_OF_STOCK = 0
+	OUT_OF_LIMIT = 1
 
-	@classmethod
-	def init_data_structure(cls):
-		current_app.datapool[cls.__name__] = dict()
-		current_app.userid2orders = dict()
-
-	def __init__(self, cartid):
-		self.cart = CartModel.fetch(cartid)
-		if self.cart.is_bad_order == True:
-			raise Exception, "outofstock"
-		user_orders = current_app.userid2orders.get(self.cart.userid, None)
+	def __init__(self, id = None, cartid = None):
+		if cartid is None:
+			self.prefix = 'ordermodel_obj_string_'
+			DataModel.__init__(self, id)
+			return
+		is_bad_order, userid = CartModel.fetchCols(cartid, ['is_bad_order', 'userid'])
+		if is_bad_order == "1":
+			raise RuntimeError, OrderModel.OUT_OF_STOCK
+		redis_user_order_obj = RedisString('userid2orders_' + userid)
+		user_orders = redis_user_order_obj.get()
 		if user_orders is None:
-			self.cart.is_locked = True
+			#self.cart.is_locked = True
+			self.prefix = 'ordermodel_obj_string_'
 			DataModel.__init__(self)
 			self.cartid = cartid
-			current_app.userid2orders[self.cart.userid] = self.id
+			RedisSet('set_order_ids').sadd(self.id)
+			redis_user_order_obj.set(self.id)
 		else:
-			raise Exception, "outoflimit"
+			raise RuntimeError, OrderModel.OUT_OF_LIMIT
+
+	def load(self):
+		if DataModel.load(self) is False: return False
+		self.cartid = self.data_dict['cartid']
+
+	def save(self):
+		self.data_dict['cartid'] = self.cartid
+		DataModel.save(self)
 
 	@classmethod
 	def fetch_orderid_by_userid(cls, userid):
-		return current_app.userid2orders.get(userid, None)
+		return RedisString('userid2orders_' + userid).get()
 
 	@classmethod
 	def fetch_all_orderid(cls):
-		return current_app.userid2orders.values()
+		return RedisSet('set_order_ids').smembers()
 
 	def __str__(self):
-		items = [{"food_id": int(food_id), "count": count} for food_id, count in self.cart.food_ids.items()]
+		cart = CartModel.fetch(self.cartid)
+		items = [{"food_id": int(food_id), "count": count} for food_id, count in cart.food_ids.items()]
 		ret = {
 			"id": self.id,
 			"items": items,
-			"total": self.cart.total
+			"total": cart.total
 		}
 		return json.dumps(ret)

@@ -14,3 +14,9 @@ class RedisString(RedisModel):
 
 	def delete(self, val):
 		return self.redis.delete(self.key)
+
+	def incrBy(self, val):
+		return self.redis.incr(self.key, val)
+
+	def decrBy(self, val):
+		return self.redis.decr(self.key, val)

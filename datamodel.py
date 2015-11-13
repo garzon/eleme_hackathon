@@ -1,29 +1,29 @@
-from flask import current_app
+from redishash import RedisHash
+
 import util
 
-
 class DataModel:
-	# ORM settings
-	colmap = []
+	def __init__(self, id = None):
+		if id is None: id = util.gen_random_string()
+		self.id = id
+		self.data_dict = {'id': id}
+		self.redis_hash = RedisHash(self.prefix + id)
 
-	# ===============================================================================
-	# here are the methods could be overrided
-	# ===============================================================================
-	@classmethod
-	def init_data_structure(cls):
-		current_app.datapool[cls.__name__] = dict()
+	def save(self):
+		self.data_dict['id'] = self.id
+		self.redis_hash.hmset(self.data_dict)
 
-	@classmethod
-	def save_to_datapool(cls, obj):
-		current_app.datapool[cls.__name__][obj.id] = obj
+	def load(self):
+		self.data_dict = self.redis_hash.hgetall()
+		self.id = self.data_dict.get('id', None)
+		return not (self.id is None)
 
-	def __init__(self):
-		self.id = util.gen_random_string()
-		self.save_to_datapool(self)
-
-	# ===============================================================================
-	# here are the methods shouldn't be overrided, related to the global datapool
-	# ===============================================================================
 	@classmethod
 	def fetch(cls, id):
-		return current_app.datapool[cls.__name__].get(str(id), None)
+		ret = cls(id)
+		if ret.load() is False: return None
+		return ret
+
+	@classmethod
+	def fetchCols(cls, id, cols):
+		return cls(id).redis_hash.hmget(cols)
