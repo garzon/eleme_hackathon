@@ -2,7 +2,7 @@ language: py2
 script:
   - sudo pip install -r requirements.txt
   #- gunicorn -w 5 -b "$APP_HOST:$APP_PORT" app:app
-  - sudo apt-get install nginx -y
+  - sudo apt-get install nginx ruby -y
   - erb /vagrant/nginx.conf > /vagrant/nginx.conf~
   - sudo rm /etc/nginx/sites-enabled/default
   - sudo cp /vagrant/nginx.conf~ /etc/nginx/sites-available/default
