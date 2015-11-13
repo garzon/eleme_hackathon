@@ -4,6 +4,8 @@ import os
 import MySQLdb
 
 from flask import Flask, abort, current_app
+from redismodel import RedisModel
+from redisstring import RedisString
 import werkzeug.exceptions as ex
 
 from util import *
@@ -12,6 +14,9 @@ from usermodel import UserModel
 from foodmodel import FoodModel
 from cartmodel import CartModel
 
+
+# clean the cache last time
+RedisModel.flushall()
 app = Flask(__name__)
 
 
@@ -58,14 +63,11 @@ def cart_error(error):
 def initialize_my_app():
 	# model classes and ORM settings
 	mysql_model_list = {'user': UserModel, 'food': FoodModel}
-	data_model_list = [CartModel, OrderModel]
 
 	# initialize the indexes and data structure of model classes
 	current_app.datapool = {cls.__name__: dict() for cls in mysql_model_list.values()}
 	for modelclass in mysql_model_list.values():
 		modelclass.init_data_structure()
-	for datamodel in data_model_list:
-		datamodel.init_data_structure()
 
 	# connect to mysql
 	mysql_addr = os.getenv('DB_HOST', 'localhost')
@@ -86,15 +88,16 @@ def initialize_my_app():
 	# connection is useless now
 	mysql.close()
 
-	current_app.pv = 0   # for debug
+	user = current_app.datapool['UserModel']['1']
+
+	UserModel.login(user.username, user.password)
 
 
 # Controllers ========================================================================
 
-
 @app.route('/')
 def hello_world():
-	return 'Hello World! %d' % current_app.pv
+	return 'Hello World!'
 
 
 @app.route('/login', methods=['POST'])
@@ -112,21 +115,24 @@ def login_handler():
 	return (json.dumps({
 		"user_id": user.id,
 		"username": user.username,
-		"access_token": user.token
+		"access_token": user.token,
+		"debug": RedisString("token2userid_" + user.token).get(),
 	}), 200)
 
 
 @app.route('/foods', methods=['GET'])
 def foods_handler():
 	auth()
-	ret = '[' + ','.join(map(lambda foodid: str(FoodModel.fetch(foodid)), current_app.datapool['FoodModel'])) + ']'
+	ret = '[' + ','.join(map(lambda foodid: str(FoodModel.fetch(foodid)), current_app.datapool['FoodModel'].keys())) + ']'
 	return ret, 200
 
 
 @app.route('/carts', methods=['POST'])
 def new_carts_handler():
 	userid = auth()
-	cart = CartModel(userid)
+	cart = CartModel()
+	cart.userid = userid
+	cart.save()
 	return '{"cart_id": "%s"}' % cart.id, 200
 
 
@@ -156,16 +162,19 @@ def orders_handler():
 		# POST
 		data = parse_req_body()
 		cart_id = data.get('cart_id', '')
-		cart = CartModel.fetch(cart_id)
-		if (cart is None) or (cart.userid != userid):
+		cart_userid, cart_id = CartModel.fetchCols(cart_id, ['userid', 'id'])
+		if (cart_id is None) or (cart_userid != str(userid)):
 			return '{"code": "NOT_AUTHORIZED_TO_ACCESS_CART", "message": "cart not owned by user"}', 401
 		try:
-			order = OrderModel(cart.id)
+			order = OrderModel(cartid = cart_id)
+			order.save()
 		except Exception as inst:
-			if inst.args[0] == 'outoflimit':
+			if inst.args[0] == OrderModel.OUT_OF_LIMIT:
 				return '{"code": "ORDER_OUT_OF_LIMIT", "message": "每个用户只能下一单"}', 403
-			else:
+			elif inst.args[0] == OrderModel.OUT_OF_STOCK:
 				return '{"code": "FOOD_OUT_OF_STOCK", "message": "食物库存不足"}', 403
+			else:
+				return str(inst.args), 555
 		return '{"id": "%s"}' % order.id, 200
 	else:
 		# GET
@@ -184,15 +193,8 @@ def admin_orders_handler():
 	return dump_orders(orderids), 200
 
 
-@app.route('/count', methods=['GET'])
-def count_handler():
-	context = current_app
-	count = getattr(context, 'pv', 0)
-	context.pv = count + 1
-	return str(count), 200
-
-
 if __name__ == '__main__':
 	host = os.getenv("APP_HOST", "localhost")
 	port = int(os.getenv("APP_PORT", "8080"))
 	app.run(host=host, port=port)
+
