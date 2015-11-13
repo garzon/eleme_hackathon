@@ -8,8 +8,6 @@ from redismodel import RedisModel
 from redisstring import RedisString
 import werkzeug.exceptions as ex
 
-import requests
-
 from util import *
 
 from usermodel import UserModel
@@ -100,11 +98,6 @@ def initialize_my_app():
 @app.route('/')
 def hello_world():
 	return 'Hello World!'
-
-
-@app.route('/debug/<token>')
-def debug_world(token):
-	return str(RedisString("token2userid_" + token).get())
 
 
 @app.route('/login', methods=['POST'])
