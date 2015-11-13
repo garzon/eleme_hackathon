@@ -2,11 +2,12 @@ language: py2
 script:
   - sudo pip install -r requirements.txt
   #- gunicorn -w 5 -b "$APP_HOST:$APP_PORT" app:app
-  #- sudo apt-get install nginx -y
-  #- erb /vagrant/nginx.conf > /vagrant/nginx.conf~
-  #- sudo cp /vagrant/nginx.conf~ /etc/nginx/sites-available/default-2
-  #- sudo rm /etc/nginx/sites-enabled/default-2
-  #- sudo ln -s /etc/nginx/sites-available/default-2 /etc/nginx/sites-enabled
-  #- sudo service nginx restart
-  - uwsgi --processes 4 --http "$APP_HOST:$APP_PORT" --wsgi-file /vagrant/app.py --callable app
+  - sudo apt-get install nginx -y
+  - erb /vagrant/nginx.conf > /vagrant/nginx.conf~
+  - sudo rm /etc/nginx/sites-enabled/default
+  - sudo cp /vagrant/nginx.conf~ /etc/nginx/sites-available/default
+  - sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+  - sudo service nginx stop
+  - sudo service nginx start
+  - uwsgi --processes 4 -s /tmp/uwsgi.sock --wsgi-file /vagrant/app.py --callable app --chmod-socket=666
   #- uwsgi -s /tmp/uwsgi.sock -w app:app
