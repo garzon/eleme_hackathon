@@ -7,6 +7,7 @@ from cartmodel import CartModel
 
 from redisstring import RedisString
 from redisset import RedisSet
+from redishash import RedisHash
 
 import json
 
@@ -57,13 +58,7 @@ class OrderModel(DataModel):
 		dumped = redis_obj.get()
 		if dumped is None:
 			cart_total, food_ids, food_nums = CartModel.fetchCols(cls.fetchCols(id, 'cartid')[0], ['total', 'food_ids', 'food_nums'])
-			items = [{"food_id": int(food_id), "count": int(count)} for food_id, count in zip(food_ids.split(','), food_nums.split(','))]
-			ret = {
-				"id": id,
-				"items": items,
-				"total": int(cart_total)
-			}
-			dumped = json.dumps(ret)
+			items = '[' + ','.join(['{"food_id": %s, "count": %s}' % (food_id, count) for food_id, count in zip(food_ids.split(','), food_nums.split(','))]) + ']'
+			dumped = '{"id": "%s","items": %s, "total": %s}' % (id, items, cart_total)
 			redis_obj.set(dumped)
 		return dumped
-

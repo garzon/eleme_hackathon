@@ -49,11 +49,12 @@ class CartModel(DataModel):
 		if food.reserve(count):
 			self.food_count += count
 			self.total += count * food.price
-			if id in self.food_ids.keys():
+			try:
 				self.food_ids[id] += count
-			else:
+			except KeyError:
 				self.food_ids[id] = count
 		else:
 			self.is_bad_order = True
 		self.save()
 		return True
+

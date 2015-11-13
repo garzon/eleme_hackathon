@@ -112,17 +112,13 @@ def login_handler():
 	user = UserModel.login(username, password)
 	if user is False:
 		abort(403)
-	return '''{
-		"user_id":''' + str(user.id) + ''',
-		"username":"''' + user.username + '''",
-		"access_token":"''' + user.token + '''"
-	}''', 200
+	return '{"user_id":%s,"username":"%s","access_token":"%s"}' % (str(user.id), user.username, user.token), 200
 
 
 @app.route('/foods', methods=['GET'])
 def foods_handler():
 	auth()
-	stocks = tuple(RedisModel.get_redis().mget(['food_stock_of_' + id for id in current_app.food_ids_arr]))
+	stocks = tuple(RedisModel.get_redis().mget(current_app.food_ids_arr))
 	return current_app.food_template_str % stocks, 200
 
 
@@ -195,3 +191,4 @@ if __name__ == '__main__':
 	host = os.getenv("APP_HOST", "localhost")
 	port = int(os.getenv("APP_PORT", "8080"))
 	app.run(host=host, port=port)
+
