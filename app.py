@@ -61,6 +61,8 @@ def cart_error(error):
 
 @app.before_first_request
 def initialize_my_app():
+	current_app.redis = None
+
 	# model classes and ORM settings
 	mysql_model_list = {'user': UserModel, 'food': FoodModel}
 
