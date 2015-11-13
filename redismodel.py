@@ -22,3 +22,5 @@ class RedisModel:
 	
 	def __init__(self):
 		self.redis = self.get_redis()
+
+
