@@ -82,7 +82,7 @@ def initialize_my_app():
 	# load all the data
 	cursor = mysql.cursor()
 	for table_name, model_class in mysql_model_list.items():
-		cursor.execute("SELECT * from %s" % table_name)
+		cursor.execute("SELECT * from " + table_name)
 		data = cursor.fetchall()
 		for datum in data:
 			model_class.parse(datum)
@@ -117,8 +117,7 @@ def login_handler():
 	return (json.dumps({
 		"user_id": user.id,
 		"username": user.username,
-		"access_token": user.token,
-		"debug": RedisString("token2userid_" + user.token).get(),
+		"access_token": user.token
 	}), 200)
 
 
@@ -135,7 +134,7 @@ def new_carts_handler():
 	cart = CartModel()
 	cart.userid = userid
 	cart.save()
-	return '{"cart_id": "%s"}' % cart.id, 200
+	return '{"cart_id": "' + cart.id + '"}', 200
 
 
 @app.route('/carts/<cart_id>', methods=['PATCH'])
@@ -177,7 +176,7 @@ def orders_handler():
 				return '{"code": "FOOD_OUT_OF_STOCK", "message": "食物库存不足"}', 403
 			else:
 				return str(inst.args), 555
-		return '{"id": "%s"}' % order.id, 200
+		return '{"id": "' + order.id + '"}', 200
 	else:
 		# GET
 		orderid = OrderModel.fetch_orderid_by_userid(userid)
@@ -185,7 +184,7 @@ def orders_handler():
 			return '[]', 200
 		else:
 			order = OrderModel.fetch(orderid)
-			return '[%s]' % str(order), 200
+			return '[' + str(order) + ']', 200
 
 
 @app.route('/admin/orders', methods=['GET'])

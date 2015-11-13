@@ -16,7 +16,7 @@ def parse_req_body():
 
 
 def gen_random_string():
-	return ''.join([string.printable[random.randint(0, 61)] for x in xrange(32)])
+	return ''.join([string.printable[random.randint(0, 61)] for _ in xrange(32)])
 
 
 def auth():
