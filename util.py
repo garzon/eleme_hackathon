@@ -35,6 +35,3 @@ def admin_auth():
 		abort(401)
 	return userid
 
-
-def dump_orders(order_ids):
-	return '[' + ','.join(map(lambda order_id: str(OrderModel.fetch(order_id)), order_ids)) + ']'

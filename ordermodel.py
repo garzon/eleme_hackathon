@@ -51,12 +51,19 @@ class OrderModel(DataModel):
 	def fetch_all_orderid(cls):
 		return RedisSet('set_order_ids').smembers()
 
-	def __str__(self):
-		cart = CartModel.fetch(self.cartid)
-		items = [{"food_id": int(food_id), "count": count} for food_id, count in cart.food_ids.items()]
-		ret = {
-			"id": self.id,
-			"items": items,
-			"total": cart.total
-		}
-		return json.dumps(ret)
+	@classmethod
+	def dump(cls, id):
+		redis_obj = RedisString('order_dump_string_' + id)
+		dumped = redis_obj.get()
+		if dumped is None:
+			cart_total, food_ids, food_nums = CartModel.fetchCols(cls.fetchCols(id, 'cartid')[0], ['total', 'food_ids', 'food_nums'])
+			items = [{"food_id": int(food_id), "count": int(count)} for food_id, count in zip(food_ids.split(','), food_nums.split(','))]
+			ret = {
+				"id": id,
+				"items": items,
+				"total": int(cart_total)
+			}
+			dumped = json.dumps(ret)
+			redis_obj.set(dumped)
+		return dumped
+

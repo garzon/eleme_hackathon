@@ -1,6 +1,8 @@
 from mysqlmodel import MysqlModel
 from redisstring import RedisString
 
+from flask import current_app
+
 
 class FoodModel(MysqlModel):
 	colmap = ['id', 'stock', 'price']
@@ -8,11 +10,15 @@ class FoodModel(MysqlModel):
 	def __init__(self):
 		self.token = None
 
-	def __str__(self):
-		return '{"id": ' + str(self.id) + ', "price": ' + str(self.price) + ', "stock": ' + RedisString("food_stock_of_" + str(self.id)).get() + '}'
+	@classmethod
+	def init_data_structure(cls):
+		current_app.food_ids_arr = []
+		current_app.food_template_str = []
 
 	def after_parse(self):
 		RedisString("food_stock_of_" + str(self.id)).set(self.stock)
+		current_app.food_ids_arr += [str(self.id)]
+		current_app.food_template_str += ['{"id": ' + str(self.id) + ', "price": ' + str(self.price) + ', "stock": %s}']
 
 	def reserve(self, count):
 		redisObj = RedisString("food_stock_of_" + str(self.id))
@@ -21,4 +27,3 @@ class FoodModel(MysqlModel):
 			return True
 		else:
 			return False
-

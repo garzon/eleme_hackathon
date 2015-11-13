@@ -90,9 +90,7 @@ def initialize_my_app():
 	# connection is useless now
 	mysql.close()
 
-	user = current_app.datapool['UserModel']['1']
-
-	UserModel.login(user.username, user.password)
+	current_app.food_template_str = '[' + ','.join(current_app.food_template_str) + ']'
 
 
 # Controllers ========================================================================
@@ -114,18 +112,18 @@ def login_handler():
 	user = UserModel.login(username, password)
 	if user is False:
 		abort(403)
-	return (json.dumps({
-		"user_id": user.id,
-		"username": user.username,
-		"access_token": user.token
-	}), 200)
+	return '''{
+		"user_id":''' + str(user.id) + ''',
+		"username":"''' + user.username + '''",
+		"access_token":"''' + user.token + '''"
+	}''', 200
 
 
 @app.route('/foods', methods=['GET'])
 def foods_handler():
 	auth()
-	ret = '[' + ','.join(map(lambda foodid: str(FoodModel.fetch(foodid)), current_app.datapool['FoodModel'].keys())) + ']'
-	return ret, 200
+	stocks = tuple(RedisModel.get_redis().mget(['food_stock_of_' + id for id in current_app.food_ids_arr]))
+	return current_app.food_template_str % stocks, 200
 
 
 @app.route('/carts', methods=['POST'])
@@ -153,7 +151,7 @@ def carts_handler(cart_id):
 	ret = cart.add_food(food_id, count)
 	if ret is True:
 		return '', 204
-	return json.dumps(ret), 403
+	return ret, 403
 
 
 @app.route('/orders', methods=['POST', 'GET'])
@@ -183,19 +181,17 @@ def orders_handler():
 		if orderid is None:
 			return '[]', 200
 		else:
-			order = OrderModel.fetch(orderid)
-			return '[' + str(order) + ']', 200
+			return '[' + OrderModel.dump(orderid) + ']', 200
 
 
 @app.route('/admin/orders', methods=['GET'])
 def admin_orders_handler():
 	admin_auth()
 	orderids = OrderModel.fetch_all_orderid()
-	return dump_orders(orderids), 200
+	return '[' + ','.join(map(lambda order_id: OrderModel.dump(order_id), orderids)) + ']', 200
 
 
 if __name__ == '__main__':
 	host = os.getenv("APP_HOST", "localhost")
 	port = int(os.getenv("APP_PORT", "8080"))
 	app.run(host=host, port=port)
-
