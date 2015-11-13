@@ -8,6 +8,6 @@ script:
   #- sudo rm /etc/nginx/sites-enabled/default-2
   #- sudo ln -s /etc/nginx/sites-available/default-2 /etc/nginx/sites-enabled
   #- sudo service nginx restart
-  - uwsgi --processes 2 --threads 4 --http "$APP_HOST:$APP_PORT" --wsgi-file /vagrant/app.py --callable app
+  - uwsgi --processes 4 --http "$APP_HOST:$APP_PORT" --wsgi-file /vagrant/app.py --callable app
   #- uwsgi -s /tmp/uwsgi.sock -w app:app
 
