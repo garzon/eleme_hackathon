@@ -198,4 +198,3 @@ if __name__ == '__main__':
 	host = os.getenv("APP_HOST", "localhost")
 	port = int(os.getenv("APP_PORT", "8080"))
 	app.run(host=host, port=port)
-

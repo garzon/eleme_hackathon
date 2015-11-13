@@ -1,4 +1,4 @@
 language: py2
 script:
   - sudo pip install -r requirements.txt
-  - uwsgi --plugins python,gevent --gevent 100 --processes 4 --http "$APP_HOST:$APP_PORT" --wsgi-file /vagrant/app.py --callable app
+  - uwsgi --gevent 2000 -l 1000 --processes 4 --http "$APP_HOST:$APP_PORT" --wsgi-file /vagrant/app.py --callable app
