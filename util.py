@@ -1,7 +1,10 @@
 import json, random, string
-from flask import request, abort
+from flask import request, abort, current_app
+
+from collections import deque
 
 from usermodel import UserModel
+
 
 def parse_req_body():
 	if request.data == '':
@@ -13,10 +16,18 @@ def parse_req_body():
 		return dict()
 
 
-def gen_random_string():
+def gen_random_string_pool():
 	randint = random.randint
 	printable = string.printable
-	return ''.join([printable[randint(0, 61)] for _ in xrange(32)])
+	current_app.random_string_pool = deque([''.join([printable[randint(0, 61)] for _ in xrange(32)]) for _ in xrange(50000)])
+
+
+def gen_random_string():
+	try:
+		return current_app.random_string_pool.pop()
+	except IndexError:
+		gen_random_string_pool()
+		return current_app.random_string_pool.pop()
 
 
 def auth():

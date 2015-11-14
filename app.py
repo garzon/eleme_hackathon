@@ -63,6 +63,7 @@ def cart_error(error):
 @app.before_first_request
 def initialize_my_app():
 	current_app.redis = None
+	gen_random_string_pool()
 
 	# model classes and ORM settings
 	mysql_model_list = {'user': UserModel, 'food': FoodModel}
@@ -195,3 +196,5 @@ if __name__ == '__main__':
 	host = os.getenv("APP_HOST", "localhost")
 	port = int(os.getenv("APP_PORT", "8080"))
 	app.run(host=host, port=port)
+
+
