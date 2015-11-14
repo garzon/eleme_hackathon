@@ -2,8 +2,6 @@ import json, random, string
 from flask import request, abort
 
 from usermodel import UserModel
-from ordermodel import OrderModel
-
 
 def parse_req_body():
 	if request.data == '':
@@ -16,7 +14,9 @@ def parse_req_body():
 
 
 def gen_random_string():
-	return ''.join([string.printable[random.randint(0, 61)] for _ in xrange(32)])
+	randint = random.randint
+	printable = string.printable
+	return ''.join([printable[randint(0, 61)] for _ in xrange(32)])
 
 
 def auth():

@@ -13,6 +13,7 @@ from util import *
 from usermodel import UserModel
 from foodmodel import FoodModel
 from cartmodel import CartModel
+from ordermodel import OrderModel
 
 
 # clean the cache last time
@@ -118,8 +119,13 @@ def login_handler():
 @app.route('/foods', methods=['GET'])
 def foods_handler():
 	auth()
-	stocks = tuple(RedisModel.get_redis().mget(current_app.food_ids_arr))
-	return current_app.food_template_str % stocks, 200
+	redis_obj = RedisString("foods_cache")
+	ret = redis_obj.get()
+	if ret is None:
+		stocks = tuple(RedisModel.get_redis().mget(current_app.food_ids_arr))
+		ret = current_app.food_template_str % stocks
+		redis_obj.setex(ret, 4)
+	return ret, 200
 
 
 @app.route('/carts', methods=['POST'])
@@ -158,19 +164,17 @@ def orders_handler():
 		data = parse_req_body()
 		cart_id = data.get('cart_id', '')
 		cart_userid, cart_id = CartModel.fetchCols(cart_id, ['userid', 'id'])
-		if (cart_id is None) or (cart_userid != str(userid)):
-			return '{"code": "NOT_AUTHORIZED_TO_ACCESS_CART", "message": "cart not owned by user"}', 401
+		#if (cart_id is None) or (cart_userid != str(userid)):
+		#	return '{"code": "NOT_AUTHORIZED_TO_ACCESS_CART", "message": "cart not owned by user"}', 401
 		try:
-			order = OrderModel(cartid = cart_id)
+			order = OrderModel.create(cart_id)
 			order.save()
+			return '{"id": "' + order.id + '"}', 200
 		except Exception as inst:
 			if inst.args[0] == OrderModel.OUT_OF_LIMIT:
 				return '{"code": "ORDER_OUT_OF_LIMIT", "message": "每个用户只能下一单"}', 403
 			elif inst.args[0] == OrderModel.OUT_OF_STOCK:
 				return '{"code": "FOOD_OUT_OF_STOCK", "message": "食物库存不足"}', 403
-			else:
-				return str(inst.args), 555
-		return '{"id": "' + order.id + '"}', 200
 	else:
 		# GET
 		orderid = OrderModel.fetch_orderid_by_userid(userid)

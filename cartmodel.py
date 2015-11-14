@@ -16,21 +16,24 @@ class CartModel(DataModel):
 
 	def load(self):
 		if DataModel.load(self) is False: return False
-		self.food_ids = {x: int(y) for x, y in zip(self.data_dict['food_ids'].split(','), self.data_dict['food_nums'].split(',')) if len(x)}
-		self.food_count = int(self.data_dict['food_count'])
-		self.total = int(self.data_dict['total'])
-		self.is_locked = (self.data_dict['is_locked'] == "1")
-		self.is_bad_order = (self.data_dict['is_bad_order'] == "1")
-		self.userid = self.data_dict['userid']
+		data_dict = self.data_dict
+		tmp = zip(data_dict['food_ids'].split(','), data_dict['food_nums'].split(','))
+		self.food_ids = {x: int(y) for x, y in tmp if y != ''}
+		self.food_count = int(data_dict['food_count'])
+		self.total = int(data_dict['total'])
+		self.is_locked = (data_dict['is_locked'] == "1")
+		self.is_bad_order = (data_dict['is_bad_order'] == "1")
+		self.userid = data_dict['userid']
 
 	def save(self):
-		self.data_dict['food_count'] = self.food_count
-		self.data_dict['total'] = self.total
-		self.data_dict['is_locked'] = "1" if self.is_locked else "0"
-		self.data_dict['is_bad_order'] = "1" if self.is_bad_order else "0"
-		self.data_dict['userid'] = self.userid
-		self.data_dict['food_ids'] = ','.join(map(lambda i: str(i), self.food_ids.keys()))
-		self.data_dict['food_nums'] = ','.join(map(lambda i: str(i), self.food_ids.values()))
+		data_dict = self.data_dict
+		data_dict['food_count'] = self.food_count
+		data_dict['total'] = self.total
+		data_dict['is_locked'] = "1" if self.is_locked else "0"
+		data_dict['is_bad_order'] = "1" if self.is_bad_order else "0"
+		data_dict['userid'] = self.userid
+		data_dict['food_ids'] = ','.join(map(lambda i: str(i), self.food_ids.keys()))
+		data_dict['food_nums'] = ','.join(map(lambda i: str(i), self.food_ids.values()))
 		DataModel.save(self)
 
 	def add_food(self, id, count):

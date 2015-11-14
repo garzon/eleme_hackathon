@@ -12,6 +12,9 @@ class RedisString(RedisModel):
 	def set(self, val):
 		return self.redis.set(self.key, val)
 
+	def setex(self, val, expire):
+		return self.redis.setex(self.key, val, expire)
+
 	def delete(self, val):
 		return self.redis.delete(self.key)
 

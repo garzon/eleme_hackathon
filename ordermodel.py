@@ -1,40 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from flask import current_app
-
 from datamodel import DataModel
 from cartmodel import CartModel
 
 from redisstring import RedisString
 from redisset import RedisSet
-from redishash import RedisHash
-
-import json
 
 
 class OrderModel(DataModel):
 	OUT_OF_STOCK = 0
 	OUT_OF_LIMIT = 1
 
-	def __init__(self, id = None, cartid = None):
-		if cartid is None:
-			self.prefix = 'ordermodel_obj_string_'
-			DataModel.__init__(self, id)
-			return
-		is_bad_order, userid = CartModel.fetchCols(cartid, ['is_bad_order', 'userid'])
-		if is_bad_order == "1":
-			raise RuntimeError, OrderModel.OUT_OF_STOCK
-		redis_user_order_obj = RedisString('userid2orders_' + userid)
-		user_orders = redis_user_order_obj.get()
-		if user_orders is None:
-			#self.cart.is_locked = True
-			self.prefix = 'ordermodel_obj_string_'
-			DataModel.__init__(self)
-			self.cartid = cartid
-			RedisSet('set_order_ids').sadd(self.id)
-			redis_user_order_obj.set(self.id)
-		else:
-			raise RuntimeError, OrderModel.OUT_OF_LIMIT
+	def __init__(self, id = None):
+		self.prefix = 'ordermodel_obj_string_'
+		DataModel.__init__(self, id)
 
 	def load(self):
 		if DataModel.load(self) is False: return False
@@ -43,6 +22,22 @@ class OrderModel(DataModel):
 	def save(self):
 		self.data_dict['cartid'] = self.cartid
 		DataModel.save(self)
+
+	@classmethod
+	def create(cls, cartid):
+		is_bad_order, userid = CartModel.fetchCols(cartid, ['is_bad_order', 'userid'])
+		if is_bad_order == "1":
+			raise RuntimeError, OrderModel.OUT_OF_STOCK
+		redis_user_order_obj = RedisString('userid2orders_' + userid)
+		user_orders = redis_user_order_obj.get()
+		if user_orders is None:
+			ret = cls()
+			ret.cartid = cartid
+			RedisSet('set_order_ids').sadd(ret.id)
+			redis_user_order_obj.set(ret.id)
+			return ret
+		else:
+			raise RuntimeError, OrderModel.OUT_OF_LIMIT
 
 	@classmethod
 	def fetch_orderid_by_userid(cls, userid):
