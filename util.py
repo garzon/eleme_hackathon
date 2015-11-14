@@ -20,9 +20,7 @@ def gen_random_string():
 
 
 def auth():
-	token = request.args.get('access_token', None)
-	if token is None:
-		token = request.headers.get('access_token', '')
+	token = request.args.get('access_token', None) or request.headers.get('access_token', '')
 	userid = UserModel.find_userid_by_token(token)
 	if userid is False:
 		abort(401)
@@ -31,7 +29,6 @@ def auth():
 
 def admin_auth():
 	userid = auth()
-	if userid != 1:
+	if str(userid) != "1":
 		abort(401)
 	return userid
-

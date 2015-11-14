@@ -113,7 +113,7 @@ def login_handler():
 	user = UserModel.login(username, password)
 	if user is False:
 		abort(403)
-	return '{"user_id":%s,"username":"%s","access_token":"%s"}' % (str(user.id), user.username, user.token), 200
+	return user.dump_string, 200
 
 
 @app.route('/foods', methods=['GET'])
@@ -195,4 +195,3 @@ if __name__ == '__main__':
 	host = os.getenv("APP_HOST", "localhost")
 	port = int(os.getenv("APP_PORT", "8080"))
 	app.run(host=host, port=port)
-
