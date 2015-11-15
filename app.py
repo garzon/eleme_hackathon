@@ -125,7 +125,7 @@ def foods_handler():
 	if ret is None:
 		stocks = tuple(RedisModel.get_redis().mget(current_app.food_ids_arr))
 		ret = current_app.food_template_str % stocks
-		redis_obj.psetex(ret, 500)
+		redis_obj.psetex(ret, 1300)
 	return ret, 200
 
 
