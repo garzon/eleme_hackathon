@@ -23,11 +23,14 @@ def gen_random_string_pool():
 
 
 def gen_random_string():
-	try:
-		return current_app.random_string_pool.pop()
-	except IndexError:
-		gen_random_string_pool()
-		return current_app.random_string_pool.pop()
+	randint = random.randint
+	printable = string.printable
+	#try:
+	#	return current_app.random_string_pool.pop()
+	#except IndexError:
+	#	gen_random_string_pool()
+	#	return current_app.random_string_pool.pop()
+	return ''.join([printable[randint(0, 61)] for _ in xrange(32)])
 
 
 def auth():

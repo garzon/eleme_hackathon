@@ -32,12 +32,11 @@ class UserModel(MysqlModel):
 	def after_parse(self):
 		current_app.username2userid[self.username] = self.id
 		current_app.username2user[self.username] = self
-		self.update_token()
-		self.dump_string = '{"user_id":%s,"username":"%s","access_token":"%s"}' % (str(self.id), self.username, self.token)
 
 	@classmethod
 	def login(cls, username, password):
 		user = current_app.username2user.get(username, None)
 		if (user is None) or user.password != password: return False
+		user.update_token()
 		return user
 

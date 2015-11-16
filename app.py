@@ -63,7 +63,7 @@ def cart_error(error):
 @app.before_first_request
 def initialize_my_app():
 	current_app.redis = None
-	gen_random_string_pool()
+	#gen_random_string_pool()
 
 	# model classes and ORM settings
 	mysql_model_list = {'user': UserModel, 'food': FoodModel}
@@ -114,7 +114,7 @@ def login_handler():
 	user = UserModel.login(username, password)
 	if user is False:
 		abort(403)
-	return user.dump_string, 200
+	return'{"user_id":%s,"username":"%s","access_token":"%s"}' % (str(user.id), user.username, user.token), 200
 
 
 @app.route('/foods', methods=['GET'])
@@ -122,10 +122,11 @@ def foods_handler():
 	auth()
 	redis_obj = RedisString("foods_cache")
 	ret = redis_obj.get()
+	#if True:
 	if ret is None:
 		stocks = tuple(RedisModel.get_redis().mget(current_app.food_ids_arr))
 		ret = current_app.food_template_str % stocks
-		redis_obj.psetex(ret, 1300)
+		redis_obj.psetex(ret, 1500)
 	return ret, 200
 
 
