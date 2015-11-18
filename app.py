@@ -126,7 +126,7 @@ def foods_handler():
 	if ret is None:
 		stocks = tuple(RedisModel.get_redis().mget(current_app.food_ids_arr))
 		ret = current_app.food_template_str % stocks
-		redis_obj.psetex(ret, 1500)
+		redis_obj.psetex(ret, 1100)
 	return ret, 200
 
 
@@ -197,5 +197,3 @@ if __name__ == '__main__':
 	host = os.getenv("APP_HOST", "localhost")
 	port = int(os.getenv("APP_PORT", "8080"))
 	app.run(host=host, port=port)
-
-
