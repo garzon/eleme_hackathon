@@ -1,4 +1,5 @@
 language: go
 script:
-  - export GOPATH=$(pwd):$GOPATH && go get
+  # the connection to github is not stable, so I downloaded the dependencies and put them in the git repo.
+  #- export GOPATH=$(pwd):$GOPATH && go get
   - export GOPATH=$(pwd):$GOPATH && go run main.go
