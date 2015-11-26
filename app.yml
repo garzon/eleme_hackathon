@@ -1,3 +1,4 @@
 language: go
 script:
-    - go run main.go
+  - go get
+  - go run main.go
