@@ -22,7 +22,7 @@ func (this *UserModel) create(id int, username, password string) *UserModel {
 	ret.token = ""
 	datapool[ret.id] = ret
 	username2user[username] = ret
-	ret.updateToken()
+	//ret.updateToken()
 	return ret
 }
 
@@ -45,7 +45,7 @@ func (this *UserModel) login(username, password string) *UserModel {
 	user, ok := username2user[username]
 	if !ok { return nil }
 	if user.password != password { return nil }
-	//user.updateToken()
+	user.updateToken()
 	return user
 }
 
