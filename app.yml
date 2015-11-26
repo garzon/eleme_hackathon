@@ -1,7 +1,7 @@
 language: go
 script:
-  - echo $(pwd)
-  - find / -name main.go 2>/dev/null
-  - cd /srv && sudo ln -s /vagrant/ ./gopath
+  - cd /srv
+  - sudo rm ./gopath -rf
+  - sudo ln -s /vagrant/ ./gopath
   - cd /vagrant/ && go get
   - go run main.go
