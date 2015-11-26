@@ -1,3 +1,4 @@
 language: go
 script:
-  - export GOPATH=$(pwd):$GOPATH && go get && go run main.go
+  - export GOPATH=$(pwd):$GOPATH && go get
+  - export GOPATH=$(pwd):$GOPATH && go run main.go
