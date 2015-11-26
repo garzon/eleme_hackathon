@@ -1,7 +1,6 @@
 language: go
 script:
-  - cd /srv
-  - sudo unlink ./gopath -rf
-  - sudo ln -s /vagrant/ ./gopath
-  - cd /vagrant/ && go get
+  - sudo cp /vagrant/* /srv/gopath/ -R
+  - cd /srv/gopath
+  - go get
   - go run main.go
