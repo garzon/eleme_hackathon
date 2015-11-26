@@ -126,7 +126,7 @@ func Eleme() {
 			lock, _ := redis.Int(redisConn.Do("SETNX", "foods_cache_lock", "1"))
 			if lock == 1 {
 				ret = foodModel.dumpAll(redisConn)
-				redisConn.Do("PSETEX", "foods_cache", 2010, ret)
+				redisConn.Do("PSETEX", "foods_cache", 1300, ret)
 				redisConn.Do("SET", "foods_cache_forever", ret)
 				redisConn.Do("DEL", "foods_cache_lock")
 			} else {
