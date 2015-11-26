@@ -1,4 +1,5 @@
 language: go
 script:
+  - sudo ln -s /vagrant/ /srv/gopath
   - go get
   - go run main.go
