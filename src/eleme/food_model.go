@@ -13,6 +13,7 @@ type FoodModel struct {
 	realid int
 	stock int
 	price int
+	templateString string
 }
 
 var foodpool = list.New()
@@ -35,6 +36,9 @@ func (this *FoodModel) create(id, stock, price int) *FoodModel {
 
 	datapool[ret.id] = ret
 	foodpool.PushBack(ret)
+
+	ret.templateString = fmt.Sprintf("{\"id\":%d,\"price\":%d,\"stock\":%%s}", id, price)
+
 	return ret
 }
 
@@ -51,17 +55,17 @@ func (this *FoodModel) reserve(count int) bool {
 	}
 }
 
-func (this *FoodModel) dump() string {
-	redisConn := redisPool.Get()
-        defer redisConn.Close()
+func (this *FoodModel) dump(redisConn redis.Conn) string {
 	foodStock, _ := redis.String(redisConn.Do("GET", "food_stock_of_" + this.id))
-	return fmt.Sprintf("{\"id\":%d,\"price\":%d,\"stock\":%s}", this.realid, this.price, foodStock)
+	return fmt.Sprintf(this.templateString, foodStock)
 }
 
 func (this *FoodModel) dumpAll() string {
 	var buf []string
+	redisConn := redisPool.Get()
+        defer redisConn.Close()
 	for obj := foodpool.Front(); obj != nil; obj = obj.Next() {
-		buf = append(buf, obj.Value.(*FoodModel).dump())
+		buf = append(buf, obj.Value.(*FoodModel).dump(redisConn))
 	}
 	return "[" + strings.Join(buf, ",") + "]"
 }
