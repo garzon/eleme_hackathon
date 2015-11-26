@@ -125,12 +125,12 @@ func Eleme() {
 		userid := auth(w, r)
 		if userid == "" { return }
 		redisConn := redisPool.Get()
-		defer redisConn.Close()
 		ret, _ := redis.String(redisConn.Do("GET", "foods_cache"))
 		if ret == "" {
 			ret = foodModel.dumpAll(redisConn)
-			redisConn.Do("PSETEX", "foods_cache", 300, ret)
+			redisConn.Do("PSETEX", "foods_cache", 500, ret)
 		}
+		redisConn.Close()
 		w.Write([]byte(ret))
 	}))
 
