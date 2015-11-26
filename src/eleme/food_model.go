@@ -60,10 +60,8 @@ func (this *FoodModel) dump(redisConn redis.Conn) string {
 	return fmt.Sprintf(this.templateString, foodStock)
 }
 
-func (this *FoodModel) dumpAll() string {
+func (this *FoodModel) dumpAll(redisConn redis.Conn) string {
 	var buf []string
-	redisConn := redisPool.Get()
-        defer redisConn.Close()
 	for obj := foodpool.Front(); obj != nil; obj = obj.Next() {
 		buf = append(buf, obj.Value.(*FoodModel).dump(redisConn))
 	}

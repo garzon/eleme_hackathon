@@ -123,7 +123,14 @@ func Eleme() {
 	mux.Get("/foods", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userid := auth(w, r)
 		if userid == "" { return }
-		w.Write([]byte(foodModel.dumpAll()))
+		redisConn := redisPool.Get()
+		defer redisConn.Close()
+		ret, _ := redis.String(redisConn.Do("GET", "foods_cache"))
+		if ret == "" {
+			ret = foodModel.dumpAll(redisConn)
+			redisConn.Do("PSETEX", "foods_cache", 300, ret)
+		}
+		w.Write([]byte(ret))
 	}))
 
 	mux.Post("/carts", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
