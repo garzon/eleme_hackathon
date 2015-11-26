@@ -1,6 +1,3 @@
 language: go
 script:
-  - sudo cp /vagrant/* /srv/gopath/ -R
-  - cd /srv/gopath
-  - go get
   - go run main.go
