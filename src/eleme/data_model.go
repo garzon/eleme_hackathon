@@ -10,15 +10,11 @@ func (this *DataModel) generateId() {
 	this.Id = genRandomString()
 }
 
-func (this *DataModel) saveRawData(rawData string) {
-	redisConn := redisPool.Get()
-        defer redisConn.Close()
+func (this *DataModel) saveRawData(redisConn redis.Conn, rawData string) {
 	redisConn.Do("SET", this.Id, rawData)
 }
 
-func (this *DataModel) loadRawData() string {
-	redisConn := redisPool.Get()
-        defer redisConn.Close()
+func (this *DataModel) loadRawData(redisConn redis.Conn) string {
 	ret, _ := redis.String(redisConn.Do("GET", this.Id))
 	return ret
 }

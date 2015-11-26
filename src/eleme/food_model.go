@@ -42,10 +42,8 @@ func (this *FoodModel) create(id, stock, price int) *FoodModel {
 	return ret
 }
 
-func (this *FoodModel) reserve(count int) bool {
+func (this *FoodModel) reserve(redisConn redis.Conn,count int) bool {
 	key := "food_stock_of_" + this.id
-	redisConn := redisPool.Get()
-        defer redisConn.Close()
 	ret, _ := redis.Int(redisConn.Do("DECRBY", key, count))
 	if ret < 0 {
 		redisConn.Do("INCRBY", key, count)

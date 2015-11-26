@@ -93,10 +93,6 @@ func Eleme() {
 
 	mux := pat.New()
 
-	/*http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("hello world!"))
-	})*/
-
 	mux.Post("/login", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.ContentLength == 0 {
 			emptyRequest(w)
@@ -128,7 +124,7 @@ func Eleme() {
 		ret, _ := redis.String(redisConn.Do("GET", "foods_cache"))
 		if ret == "" {
 			ret = foodModel.dumpAll(redisConn)
-			redisConn.Do("PSETEX", "foods_cache", 500, ret)
+			redisConn.Do("PSETEX", "foods_cache", 300, ret)
 		}
 		redisConn.Close()
 		w.Write([]byte(ret))

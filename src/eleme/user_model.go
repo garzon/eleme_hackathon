@@ -10,13 +10,7 @@ type UserModel struct {
 	password string
 	token string
 }
-/*
-func (this *UserModel) fetch(id string) *UserModel {
-	ret := this.MysqlModel.fetch("User_" + id)
-	if ret == nil { return nil }
-	return ret.(*UserModel)
-}
-*/
+
 var username2user = map[string] *UserModel {}
 
 func (this *UserModel) create(id int, username, password string) *UserModel {
@@ -28,21 +22,22 @@ func (this *UserModel) create(id int, username, password string) *UserModel {
 	ret.token = ""
 	datapool[ret.id] = ret
 	username2user[username] = ret
+	ret.updateToken()
 	return ret
 }
 
 func (this *UserModel) findUserIdByToken(token string) string {
 	redisConn := redisPool.Get()
-        defer redisConn.Close()
 	ret, _ := redis.String(redisConn.Do("GET", "token2userid_" + token))
+	redisConn.Close()
 	return ret
 }
 
 func (this *UserModel) updateToken() string {
-	redisConn := redisPool.Get()
-        defer redisConn.Close()
 	this.token = genRandomString()
+	redisConn := redisPool.Get()
 	redisConn.Do("SET", "token2userid_" + this.token, this.id)
+	redisConn.Close()
 	return this.token
 }
 
@@ -50,7 +45,7 @@ func (this *UserModel) login(username, password string) *UserModel {
 	user, ok := username2user[username]
 	if !ok { return nil }
 	if user.password != password { return nil }
-	user.updateToken()
+	//user.updateToken()
 	return user
 }
 
