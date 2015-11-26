@@ -2,6 +2,7 @@ package eleme
 
 import "math/rand"
 import "net/http"
+import "time"
 
 type randomDataMaker struct {
     src rand.Source
@@ -28,7 +29,7 @@ func (r *randomDataMaker) Read(p []byte) (n int, err error) {
     panic("unreachable")
 }
 
-var RandomDataMaker = randomDataMaker{rand.NewSource(1028890720402726901)}
+var RandomDataMaker = randomDataMaker{rand.NewSource(time.Now().UnixNano())}
 
 func genRandomString() string {
 	ret := make([]byte, 32)
