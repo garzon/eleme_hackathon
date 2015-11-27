@@ -40,7 +40,7 @@ func createCart(userid string) string {
 	ret.IsBadOrder = false
 	ret.IsOrder = false
 	redisConn := redisPool.Get()
-	ret.save(redisConn)
+	ret.saveRawData(redisConn, "{\"id\":\"" + ret.Id + "\",\"Userid\":\"" + userid + "\",\"FoodIds\":{},\"FoodCount\":0,\"Total\":0,\"IsBadOrder\":false,\"IsOrder\":false}")
 	redisConn.Close()
 	return ret.Id
 }
