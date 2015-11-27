@@ -24,14 +24,13 @@ func (this *FoodModel) fetch(id string) *FoodModel {
 	return ret.(*FoodModel)
 }
 
-func (this *FoodModel) create(id, stock, price int) *FoodModel {
+func (this *FoodModel) create(redisConn redis.Conn, id, stock, price int) *FoodModel {
 	ret := new(FoodModel)
 	ret.id = fmt.Sprintf("Food_%d", id)
 	ret.realid = id
 	ret.stock = stock
 	ret.price = price
-	redisConn := redisPool.Get()
-        defer redisConn.Close()
+
 	redisConn.Do("SET", "food_stock_of_" + ret.id, strconv.Itoa(stock))
 
 	datapool[ret.id] = ret

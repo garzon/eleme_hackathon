@@ -3,6 +3,7 @@ package eleme
 import "math/rand"
 import "net/http"
 import "time"
+import "github.com/garyburd/redigo/redis"
 
 type randomDataMaker struct {
     src rand.Source
@@ -37,7 +38,7 @@ func genRandomString() string {
 	return string(ret[:32])
 }
 
-func auth(w http.ResponseWriter, r *http.Request) string {
+func auth(redisConn redis.Conn, w http.ResponseWriter, r *http.Request) string {
 	token := r.URL.Query().Get("access_token")
 	if token == "" {
 		token = r.Header.Get("Access-Token")	
@@ -46,7 +47,7 @@ func auth(w http.ResponseWriter, r *http.Request) string {
 		invalidToken(w)
 		return ""
 	}
-	userid := userModel.findUserIdByToken(token)
+	userid := userModel.findUserIdByToken(redisConn, token)
 	if userid == "" { 
 		invalidToken(w)
 		return ""

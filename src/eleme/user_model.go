@@ -26,10 +26,8 @@ func (this *UserModel) create(id int, username, password string) *UserModel {
 	return ret
 }
 
-func (this *UserModel) findUserIdByToken(token string) string {
-	redisConn := redisPool.Get()
+func (this *UserModel) findUserIdByToken(redisConn redis.Conn, token string) string {
 	ret, _ := redis.String(redisConn.Do("GET", "token2userid_" + token))
-	redisConn.Close()
 	return ret
 }
 

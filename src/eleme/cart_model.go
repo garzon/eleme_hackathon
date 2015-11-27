@@ -30,7 +30,7 @@ func (this *CartModel) load(redisConn redis.Conn) bool {
 	return true
 }
 
-func createCart(userid string) string {
+func createCart(redisConn redis.Conn, userid string) string {
 	ret := new(CartModel)
 	ret.DataModel.generateId()
 	ret.Userid = userid
@@ -39,22 +39,18 @@ func createCart(userid string) string {
 	ret.Total = 0
 	ret.IsBadOrder = false
 	ret.IsOrder = false
-	redisConn := redisPool.Get()
 	ret.save(redisConn)
-	redisConn.Close()
 	return ret.Id
 }
 
-func (this *CartModel) fetch(cartid string) *CartModel {
+func (this *CartModel) fetch(redisConn redis.Conn, cartid string) *CartModel {
 	ret := new(CartModel)
 	ret.Id = cartid
-	redisConn := redisPool.Get()
-	defer redisConn.Close()
 	if ret.load(redisConn) == false { return nil }
 	return ret
 }
 
-func (this *CartModel) addFood(food *FoodModel, count int) string {
+func (this *CartModel) addFood(redisConn redis.Conn, food *FoodModel, count int) string {
 	if this.IsOrder {
 		return "{\"code\":\"ORDER_LOCKED\",\"message\":\"订单已经提交\"}"
 	}
@@ -64,8 +60,6 @@ func (this *CartModel) addFood(food *FoodModel, count int) string {
 	if this.FoodCount + count > 3 {
 		return "{\"code\":\"FOOD_OUT_OF_LIMIT\",\"message\":\"篮子中食物数量超过了三个\"}"
 	}
-	redisConn := redisPool.Get()
-	defer redisConn.Close()
 	if food.reserve(redisConn, count) {
 		foodid := strconv.Itoa(food.realid)
 		lastCount, ok := this.FoodIds[foodid]
@@ -85,26 +79,22 @@ func (this *CartModel) addFood(food *FoodModel, count int) string {
 	return ""
 }
 
-func userid2orderid(userid string) string {
-	redisConn := redisPool.Get()
+func userid2orderid(redisConn redis.Conn, userid string) string {
 	ret, _ := redis.String(redisConn.Do("GET", "userid2orderid_" + userid))
-	redisConn.Close()
 	return ret
 }
 
-func (this *CartModel) makeOrder(userid string) string {
+func (this *CartModel) makeOrder(redisConn redis.Conn, userid string) string {
 	if this.IsBadOrder {
 		return "{\"code\":\"FOOD_OUT_OF_STOCK\",\"message\":\"食物库存不足\"}"
 	}
 	if userid2orderid(userid) != "" {
-                return "{\"code\":\"ORDER_OUT_OF_LIMIT\",\"message\":\"每个用户只能下一单\"}"
-        }
-	redisConn := redisPool.Get()
+		return "{\"code\":\"ORDER_OUT_OF_LIMIT\",\"message\":\"每个用户只能下一单\"}"
+	}
 	this.IsOrder = true
 	redisConn.Do("SADD", "orders", this.Id)
 	redisConn.Do("SET", "userid2orderid_" + userid, this.Id)
 	this.save(redisConn)
-	redisConn.Close()
 	return ""
 }
 
@@ -119,10 +109,8 @@ func (this *CartModel) dump() string {
 	return ret
 }
 
-func (this *CartModel) dumpAll() string {
-	redisConn := redisPool.Get()
+func (this *CartModel) dumpAll(redisConn redis.Conn) string {
 	list, _ := redis.Values(redisConn.Do("SMEMBERS", "orders"))
-	redisConn.Close()
 	var buf []string
 	for _, id := range list {
 		buf = append(buf, cartModel.fetch(string(id.([]uint8))).dump())

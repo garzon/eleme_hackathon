@@ -118,9 +118,9 @@ func Eleme() {
 	}))
 
 	mux.Get("/foods", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userid := auth(w, r)
-		if userid == "" { return }
 		redisConn := redisPool.Get()
+		userid := auth(redisConn, w, r)
+		if userid == "" { return }
 		ret, _ := redis.String(redisConn.Do("GET", "foods_cache"))
 		if ret == "" {
 			lock, _ := redis.Int(redisConn.Do("SETNX", "foods_cache_lock", "1"))
