@@ -30,7 +30,7 @@ func (this *CartModel) load(redisConn redis.Conn) bool {
 	return true
 }
 
-func createCart(redisConn redis.Conn, userid string) string {
+func createCart(userid string) string {
 	ret := new(CartModel)
 	ret.DataModel.generateId()
 	ret.Userid = userid
@@ -39,7 +39,9 @@ func createCart(redisConn redis.Conn, userid string) string {
 	ret.Total = 0
 	ret.IsBadOrder = false
 	ret.IsOrder = false
+	redisConn := redisPool.Get()
 	ret.save(redisConn)
+	redisConn.Close()
 	return ret.Id
 }
 
@@ -103,7 +105,7 @@ func (this *CartModel) dump() string {
 	for id, count := range this.FoodIds {
 		buf = append(buf, fmt.Sprintf("{\"food_id\":%s,\"count\":%d}", id, count))
 	}
-	ret := fmt.Sprintf("{\"id\":\"%s\",\"user_id\":%s,", this.Id, strings.Replace(this.Userid, "User_", "", 1))
+	ret := fmt.Sprintf("{\"id\":\"" + this.Id + "\",\"user_id\":" + this.Userid[5:] + ",")
 	ret += "\"items\":[" + strings.Join(buf, ",") + "],"
 	ret += fmt.Sprintf("\"total\":%d}", this.Total)
 	return ret

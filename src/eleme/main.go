@@ -141,10 +141,8 @@ func Eleme() {
 	mux.Post("/carts", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userid := auth(w, r)
 		if userid == "" { return }
-		redisConn := redisPool.Get()
-		cartid := createCart(redisConn, userid)
-		redisConn.Close()
-		w.Write([]byte(fmt.Sprintf("{\"cart_id\":\"%s\"}", cartid)))
+		cartid := createCart(userid)
+		w.Write([]byte("{\"cart_id\":\"" + cartid + "\"}"))
 	}))
 
 	mux.Add("PATCH", "/carts/:cartId", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -207,7 +205,7 @@ func Eleme() {
 			customError(w, ret, 403)
 			return
 		}
-		w.Write([]byte(fmt.Sprintf("{\"id\":\"%s\"}", cart.Id)))
+		w.Write([]byte("{\"id\":\"" + cart.Id +  "\"}"))
 	}))
 
 	mux.Get("/orders", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
