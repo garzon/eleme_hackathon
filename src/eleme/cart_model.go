@@ -62,18 +62,18 @@ func (this *CartModel) addFood(redisConn redis.Conn, food *FoodModel, count int)
 	if this.FoodCount + count > 3 {
 		return "{\"code\":\"FOOD_OUT_OF_LIMIT\",\"message\":\"篮子中食物数量超过了三个\"}"
 	}
+	foodid := strconv.Itoa(food.realid)
+	lastCount, ok := this.FoodIds[foodid]
+	if !ok { lastCount = 0 }
+	lastCount += count
+	if lastCount < 0 {
+		return ""
+	}
 	if food.reserve(redisConn, count) {
-		foodid := strconv.Itoa(food.realid)
-		lastCount, ok := this.FoodIds[foodid]
-		if !ok { lastCount = 0 }
-		if lastCount + count < 0 { 
-			food.reserve(redisConn, -count)
-			return ""
-		}
 		this.FoodCount += count
-                this.Total += count * food.price
-                foodid = strconv.Itoa(food.realid)	
-		this.FoodIds[foodid] = lastCount + count
+		this.Total += count * food.price
+		foodid = strconv.Itoa(food.realid)
+		this.FoodIds[foodid] = lastCount
 	} else {
 		this.IsBadOrder = true
 	}
@@ -90,12 +90,12 @@ func (this *CartModel) makeOrder(redisConn redis.Conn, userid string) string {
 	if this.IsBadOrder {
 		return "{\"code\":\"FOOD_OUT_OF_STOCK\",\"message\":\"食物库存不足\"}"
 	}
-	if userid2orderid(redisConn, userid) != "" {
+	ret, _ := redis.Int(redisConn.Do("SETNX", "userid2orderid_" + userid, this.Id))
+	if ret != 1 {
 		return "{\"code\":\"ORDER_OUT_OF_LIMIT\",\"message\":\"每个用户只能下一单\"}"
 	}
 	this.IsOrder = true
 	redisConn.Do("SADD", "orders", this.Id)
-	redisConn.Do("SET", "userid2orderid_" + userid, this.Id)
 	this.save(redisConn)
 	return ""
 }
