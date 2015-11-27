@@ -64,7 +64,6 @@ func Eleme() {
 	
 	redisConn := redisPool.Get()
 	redisConn.Do("FLUSHALL")
-	redisConn.Close()
 
 	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", mysqlUser, mysqlPass, mysqlHost, mysqlPort, mysqlDb))
 	checkErr(err)
@@ -86,8 +85,10 @@ func Eleme() {
 		var stock int
 		var price int
 		checkErr(rows.Scan(&id, &stock, &price))
-		foodModel.create(id, stock, price)
+		foodModel.create(redisConn, id, stock, price)
 	}
+
+	redisConn.Close()
 
 	addr := fmt.Sprintf("%s:%s", host, port)
 
@@ -119,6 +120,7 @@ func Eleme() {
 
 	mux.Get("/foods", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		redisConn := redisPool.Get()
+		defer redisConn.Close()
 		userid := auth(redisConn, w, r)
 		if userid == "" { return }
 		ret, _ := redis.String(redisConn.Do("GET", "foods_cache"))
@@ -133,19 +135,22 @@ func Eleme() {
 				ret, _ = redis.String(redisConn.Do("GET", "foods_cache_forever"))
 			}
 		}
-		redisConn.Close()
 		w.Write([]byte(ret))
 	}))
 
 	mux.Post("/carts", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userid := auth(w, r)
+		redisConn := redisPool.Get()
+		defer redisConn.Close()
+		userid := auth(redisConn, w, r)
 		if userid == "" { return }
-		cartid := createCart(userid)
+		cartid := createCart(redisConn, userid)
 		w.Write([]byte(fmt.Sprintf("{\"cart_id\":\"%s\"}", cartid)))
 	}))
 
 	mux.Add("PATCH", "/carts/:cartId", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userid := auth(w, r)
+		redisConn := redisPool.Get()
+		defer redisConn.Close()
+		userid := auth(redisConn, w, r)
 		if userid == "" { return }
 		cartid := r.URL.Query().Get(":cartId")
 		decoder := json.NewDecoder(r.Body)
@@ -157,7 +162,7 @@ func Eleme() {
 			malformedJson(w)
 			return
 		}
-		cart := cartModel.fetch(cartid)
+		cart := cartModel.fetch(redisConn, cartid)
 		if cart == nil { 
 			cartError(w)
 			return
@@ -171,7 +176,7 @@ func Eleme() {
 			foodError(w)
 			return
 		}
-		err := cart.addFood(food, req.Count)
+		err := cart.addFood(redisConn, food, req.Count)
 		if err == "" {
 			noContent(w)
 			return
@@ -180,7 +185,9 @@ func Eleme() {
 	}))
 
 	mux.Post("/orders", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userid := auth(w, r)
+		redisConn := redisPool.Get()
+		defer redisConn.Close()
+		userid := auth(redisConn, w, r)
 		if userid == "" { return }
 		var req struct {
 			CartId string `json:"cart_id"`
@@ -190,12 +197,12 @@ func Eleme() {
 			malformedJson(w)
 			return
 		}
-		cart := cartModel.fetch(req.CartId)
+		cart := cartModel.fetch(redisConn, req.CartId)
 		if cart.Userid != userid {
 			cartNotOwned(w)
 			return
 		}
-		ret := cart.makeOrder(userid)
+		ret := cart.makeOrder(redisConn, userid)
 		if ret != "" {
 			customError(w, ret, 403)
 			return
@@ -204,9 +211,11 @@ func Eleme() {
 	}))
 
 	mux.Get("/orders", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userid := auth(w, r)
+		redisConn := redisPool.Get()
+		defer redisConn.Close()
+		userid := auth(redisConn, w, r)
 		if userid == "" { return }
-		cart := cartModel.fetch(userid2orderid(userid))
+		cart := cartModel.fetch(redisConn, userid2orderid(redisConn, userid))
 		if cart == nil {
 			w.Write([]byte("[]"))
 			return
@@ -215,13 +224,15 @@ func Eleme() {
 	}))
 
 	mux.Get("/admin/orders", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userid := auth(w, r)
+		redisConn := redisPool.Get()
+		defer redisConn.Close()
+		userid := auth(redisConn, w, r)
 		if userid == "" { return }
 		if userid != "User_1" {
 			invalidToken(w)			
 			return
 		}
-		w.Write([]byte(cartModel.dumpAll()))
+		w.Write([]byte(cartModel.dumpAll(redisConn)))
 	}))
 
 	http.Handle("/", mux)

@@ -88,7 +88,7 @@ func (this *CartModel) makeOrder(redisConn redis.Conn, userid string) string {
 	if this.IsBadOrder {
 		return "{\"code\":\"FOOD_OUT_OF_STOCK\",\"message\":\"食物库存不足\"}"
 	}
-	if userid2orderid(userid) != "" {
+	if userid2orderid(redisConn, userid) != "" {
 		return "{\"code\":\"ORDER_OUT_OF_LIMIT\",\"message\":\"每个用户只能下一单\"}"
 	}
 	this.IsOrder = true
@@ -113,7 +113,7 @@ func (this *CartModel) dumpAll(redisConn redis.Conn) string {
 	list, _ := redis.Values(redisConn.Do("SMEMBERS", "orders"))
 	var buf []string
 	for _, id := range list {
-		buf = append(buf, cartModel.fetch(string(id.([]uint8))).dump())
+		buf = append(buf, cartModel.fetch(redisConn, string(id.([]uint8))).dump())
 	}
 	return "[" + strings.Join(buf, ",") + "]"
 }
