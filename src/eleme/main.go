@@ -26,10 +26,10 @@ func newRedisPool(server string) *redis.Pool {
               }
               return c, err
           },
-          TestOnBorrow: func(c redis.Conn, t time.Time) error {
+          /*TestOnBorrow: func(c redis.Conn, t time.Time) error {
               _, err := c.Do("PING")
               return err
-          },
+          },*/
       }
 }
 
