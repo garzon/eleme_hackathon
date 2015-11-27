@@ -119,10 +119,9 @@ func Eleme() {
 	}))
 
 	mux.Get("/foods", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		redisConn := redisPool.Get()
-		defer redisConn.Close()
-		userid := auth(redisConn, w, r)
+		userid := auth(w, r)
 		if userid == "" { return }
+		redisConn := redisPool.Get()
 		ret, _ := redis.String(redisConn.Do("GET", "foods_cache"))
 		if ret == "" {
 			lock, _ := redis.Int(redisConn.Do("SETNX", "foods_cache_lock", "1"))
@@ -135,22 +134,21 @@ func Eleme() {
 				ret, _ = redis.String(redisConn.Do("GET", "foods_cache_forever"))
 			}
 		}
+		redisConn.Close()
 		w.Write([]byte(ret))
 	}))
 
 	mux.Post("/carts", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		redisConn := redisPool.Get()
-		defer redisConn.Close()
-		userid := auth(redisConn, w, r)
+		userid := auth(w, r)
 		if userid == "" { return }
+		redisConn := redisPool.Get()
 		cartid := createCart(redisConn, userid)
+		redisConn.Close()
 		w.Write([]byte(fmt.Sprintf("{\"cart_id\":\"%s\"}", cartid)))
 	}))
 
 	mux.Add("PATCH", "/carts/:cartId", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		redisConn := redisPool.Get()
-		defer redisConn.Close()
-		userid := auth(redisConn, w, r)
+		userid := auth(w, r)
 		if userid == "" { return }
 		cartid := r.URL.Query().Get(":cartId")
 		decoder := json.NewDecoder(r.Body)
@@ -162,6 +160,8 @@ func Eleme() {
 			malformedJson(w)
 			return
 		}
+		redisConn := redisPool.Get()
+		defer redisConn.Close()
 		cart := cartModel.fetch(redisConn, cartid)
 		if cart == nil { 
 			cartError(w)
@@ -185,9 +185,7 @@ func Eleme() {
 	}))
 
 	mux.Post("/orders", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		redisConn := redisPool.Get()
-		defer redisConn.Close()
-		userid := auth(redisConn, w, r)
+		userid := auth(w, r)
 		if userid == "" { return }
 		var req struct {
 			CartId string `json:"cart_id"`
@@ -197,6 +195,8 @@ func Eleme() {
 			malformedJson(w)
 			return
 		}
+		redisConn := redisPool.Get()
+		defer redisConn.Close()
 		cart := cartModel.fetch(redisConn, req.CartId)
 		if cart.Userid != userid {
 			cartNotOwned(w)
@@ -211,11 +211,11 @@ func Eleme() {
 	}))
 
 	mux.Get("/orders", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		redisConn := redisPool.Get()
-		defer redisConn.Close()
-		userid := auth(redisConn, w, r)
+		userid := auth(w, r)
 		if userid == "" { return }
+		redisConn := redisPool.Get()
 		cart := cartModel.fetch(redisConn, userid2orderid(redisConn, userid))
+		redisConn.Close()
 		if cart == nil {
 			w.Write([]byte("[]"))
 			return
@@ -224,15 +224,16 @@ func Eleme() {
 	}))
 
 	mux.Get("/admin/orders", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		redisConn := redisPool.Get()
-		defer redisConn.Close()
-		userid := auth(redisConn, w, r)
+		userid := auth(w, r)
 		if userid == "" { return }
 		if userid != "User_1" {
 			invalidToken(w)			
 			return
 		}
-		w.Write([]byte(cartModel.dumpAll(redisConn)))
+		redisConn := redisPool.Get()
+		ret := cartModel.dumpAll(redisConn)
+		redisConn.Close()
+		w.Write([]byte(ret))
 	}))
 
 	http.Handle("/", mux)
