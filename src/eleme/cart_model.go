@@ -30,17 +30,11 @@ func (this *CartModel) load(redisConn redis.Conn) bool {
 }
 
 func createCart(userid string) string {
-	ret := new(CartModel)
-	ret.DataModel.generateId()
-	ret.Userid = userid
-	ret.FoodIds = map[string] int{}
-	ret.FoodCount = 0
-	ret.Total = 0
-	ret.IsBadOrder = false
+	id := genRandomString()
 	redisConn := redisPool.Get()
-	ret.saveRawData(redisConn, "{\"id\":\"" + ret.Id + "\",\"Userid\":\"" + userid + "\",\"FoodIds\":{},\"FoodCount\":0,\"Total\":0,\"IsBadOrder\":false}")
+	redisConn.Do("SET", id, "{\"id\":\"" + id + "\",\"Userid\":\"" + userid + "\",\"FoodIds\":{},\"FoodCount\":0,\"Total\":0,\"IsBadOrder\":false}")
 	redisConn.Close()
-	return ret.Id
+	return id
 }
 
 func (this *CartModel) fetch(redisConn redis.Conn, cartid string) *CartModel {
