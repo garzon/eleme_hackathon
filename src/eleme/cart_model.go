@@ -28,12 +28,15 @@ func (this *CartModel) load(redisConn *redis.Conn) bool {
 	return true
 }
 
-func createCart(userid string) string {
-	id := genRandomString()
-	redisConn := redisPool.Get()
-	redisConn.Do("SET", id, "{\"id\":\"" + id + "\",\"Userid\":\"" + userid + "\",\"FoodIds\":{},\"FoodCount\":0,\"Total\":0,\"IsBadOrder\":false}")
-	redisConn.Close()
-	return id
+func createCart(userid, cartid string) *CartModel {
+	cart := new(CartModel)
+	cart.Id = cartid
+	cart.Userid = userid
+	cart.FoodIds = map[string] int{}
+	cart.FoodCount = 0
+	cart.Total = 0
+	cart.IsBadOrder = false
+	return cart
 }
 
 func (this *CartModel) fetch(redisConn *redis.Conn, cartid string) *CartModel {

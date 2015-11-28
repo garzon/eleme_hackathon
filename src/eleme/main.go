@@ -139,8 +139,8 @@ func Eleme() {
 	mux.Post("/carts", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userid := auth(w, r)
 		if userid == "" { return }
-		cartid := createCart(userid)
-		w.Write([]byte("{\"cart_id\":\"" + cartid + "\"}"))
+		//cartid := createCart(userid)
+		w.Write([]byte("{\"cart_id\":\""  + userid + genRandomString() + "\"}"))
 	}))
 
 	mux.Add("PATCH", "/carts/:cartId", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -162,14 +162,17 @@ func Eleme() {
 			malformedJson(w)
 			return
 		}
-		cart := cartModel.fetch(&redisConn, cartid)
-		if cart == nil { 
+		if len(cartid) <= 16 {
 			cartError(w)
 			return
 		}
-		if cart.Userid != userid {
+		if cartid[:len(userid)] != userid {
 			cartNotOwned(w)
 			return
+		}
+		cart := cartModel.fetch(&redisConn, cartid)
+		if cart == nil {
+			cart = createCart(userid, cartid)
 		}
 		food, ok := foodrealidmap[req.FoodId]
 		if !ok {
@@ -195,12 +198,16 @@ func Eleme() {
 			malformedJson(w)
 			return
 		}
+		if req.CartId[:len(userid)] != userid {
+			cartNotOwned(w)
+			return
+		}
 		redisConn := redisPool.Get()
 		defer redisConn.Close()
 		cart := cartModel.fetch(&redisConn, req.CartId)
-		if cart.Userid != userid {
-			cartNotOwned(w)
-			return
+		if cart == nil {
+			cart = createCart(userid, req.CartId)
+			cart.save(&redisConn)
 		}
 		ret := cart.makeOrder(&redisConn, userid)
 		if ret != "" {
