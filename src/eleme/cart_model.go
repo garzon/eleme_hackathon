@@ -15,7 +15,6 @@ type CartModel struct {
 	FoodCount int
 	Total int
 	IsBadOrder bool
-	IsOrder bool
 }
 
 func (this *CartModel) save(redisConn redis.Conn) {
@@ -38,9 +37,8 @@ func createCart(userid string) string {
 	ret.FoodCount = 0
 	ret.Total = 0
 	ret.IsBadOrder = false
-	ret.IsOrder = false
 	redisConn := redisPool.Get()
-	ret.saveRawData(redisConn, "{\"id\":\"" + ret.Id + "\",\"Userid\":\"" + userid + "\",\"FoodIds\":{},\"FoodCount\":0,\"Total\":0,\"IsBadOrder\":false,\"IsOrder\":false}")
+	ret.saveRawData(redisConn, "{\"id\":\"" + ret.Id + "\",\"Userid\":\"" + userid + "\",\"FoodIds\":{},\"FoodCount\":0,\"Total\":0,\"IsBadOrder\":false}")
 	redisConn.Close()
 	return ret.Id
 }
@@ -53,9 +51,9 @@ func (this *CartModel) fetch(redisConn redis.Conn, cartid string) *CartModel {
 }
 
 func (this *CartModel) addFood(redisConn redis.Conn, food *FoodModel, count int) string {
-	if this.IsOrder {
+	/*if this.IsOrder {
 		return "{\"code\":\"ORDER_LOCKED\",\"message\":\"订单已经提交\"}"
-	}
+	}*/
 	if this.IsBadOrder {
 		return ""
 	}
@@ -72,7 +70,6 @@ func (this *CartModel) addFood(redisConn redis.Conn, food *FoodModel, count int)
 	if food.reserve(redisConn, count) {
 		this.FoodCount += count
 		this.Total += count * food.price
-		foodid = strconv.Itoa(food.realid)
 		this.FoodIds[foodid] = lastCount
 	} else {
 		this.IsBadOrder = true
@@ -94,9 +91,9 @@ func (this *CartModel) makeOrder(redisConn redis.Conn, userid string) string {
 	if ret != 1 {
 		return "{\"code\":\"ORDER_OUT_OF_LIMIT\",\"message\":\"每个用户只能下一单\"}"
 	}
-	this.IsOrder = true
-	redisConn.Do("SADD", "orders", this.Id)
-	this.save(redisConn)
+	//this.IsOrder = true
+	//redisConn.Do("SADD", "orders", this.Id)
+	//this.save(redisConn)
 	return ""
 }
 
@@ -112,10 +109,18 @@ func (this *CartModel) dump() string {
 }
 
 func (this *CartModel) dumpAll(redisConn redis.Conn) string {
-	list, _ := redis.Values(redisConn.Do("SMEMBERS", "orders"))
 	var buf []string
+	/*
+	list, _ := redis.Values(redisConn.Do("SMEMBERS", "orders"))
 	for _, id := range list {
 		buf = append(buf, cartModel.fetch(redisConn, string(id.([]uint8))).dump())
+	}
+	*/
+	for _, user := range username2user {
+		orderId := userid2orderid(redisConn, user.id)
+		if orderId != "" {
+			buf = append(buf, cartModel.fetch(redisConn, orderId).dump())
+		}
 	}
 	return "[" + strings.Join(buf, ",") + "]"
 }

@@ -146,6 +146,11 @@ func Eleme() {
 	mux.Add("PATCH", "/carts/:cartId", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userid := auth(w, r)
 		if userid == "" { return }
+		redisConn := redisPool.Get()
+		if userid2orderid(redisConn, userid) != "" {
+			noContent(w)
+			return
+		}
 		cartid := r.URL.Query().Get(":cartId")
 		decoder := json.NewDecoder(r.Body)
 		var req struct {
@@ -156,7 +161,6 @@ func Eleme() {
 			malformedJson(w)
 			return
 		}
-		redisConn := redisPool.Get()
 		defer redisConn.Close()
 		cart := cartModel.fetch(redisConn, cartid)
 		if cart == nil { 
@@ -206,6 +210,7 @@ func Eleme() {
 		w.Write([]byte("{\"id\":\"" + cart.Id +  "\"}"))
 	}))
 
+	// not important
 	mux.Get("/orders", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userid := auth(w, r)
 		if userid == "" { return }
@@ -219,6 +224,7 @@ func Eleme() {
 		w.Write([]byte("[" + cart.dump() + "]"))
 	}))
 
+	// not important
 	mux.Get("/admin/orders", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userid := auth(w, r)
 		if userid == "" { return }
