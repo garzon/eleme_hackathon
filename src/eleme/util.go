@@ -31,12 +31,40 @@ func (r *randomDataMaker) Read(p []byte) (n int, err error) {
     panic("unreachable")
 }
 
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const (
+    letterIdxBits = 6                    // 6 bits to represent a letter index
+    letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+    letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
+)
+
+func (r *randomDataMaker) RandStringBytesMaskImprSrc(n int) string {
+    b := make([]byte, n)
+    // A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+    for i, cache, remain := n-1, r.src.Int63(), letterIdxMax; i >= 0; {
+        if remain == 0 {
+            cache, remain = r.src.Int63(), letterIdxMax
+        }
+        if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+            b[i] = letterBytes[idx]
+            i--
+        }
+        cache >>= letterIdxBits
+        remain--
+    }
+
+    return string(b)
+}
+
 var RandomDataMaker = randomDataMaker{rand.NewSource(time.Now().UnixNano())}
 
 func genRandomString() string {
-	ret := make([]byte, 32)
+	/*
+	ret := make([]byte, 16)
 	RandomDataMaker.Read(ret)
-	return string(ret[:32])
+	return string(ret[:16])
+	*/
+	return RandomDataMaker.RandStringBytesMaskImprSrc(16)
 }
 
 func md5_hex(text string) string {

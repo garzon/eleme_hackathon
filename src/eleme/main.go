@@ -111,7 +111,7 @@ func Eleme() {
 				authError(w)
 				return
 			} else {
-				w.Write([]byte(fmt.Sprintf("{\"user_id\":%d,\"username\":\"%s\",\"access_token\":\"%s\"}", user.realid, user.username, user.token)))
+				w.Write([]byte("{\"user_id\":" + user.realidString + ",\"username\":\"" + user.username + "\",\"access_token\":\"" + user.token + "\"}"))
 			}
 		}
 	}))
@@ -171,8 +171,8 @@ func Eleme() {
 			cartNotOwned(w)
 			return
 		}
-		food := foodModel.fetch(fmt.Sprintf("Food_%d", req.FoodId))
-		if food == nil {
+		food, ok := foodrealidmap[req.FoodId]
+		if !ok {
 			foodError(w)
 			return
 		}

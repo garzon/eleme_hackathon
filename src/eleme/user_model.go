@@ -1,10 +1,11 @@
 package eleme
 
-import "fmt"
+import "strconv"
 
 type UserModel struct {
 	MysqlModel
 	realid int
+	realidString string
 	username string
 	password string
 	token string
@@ -21,7 +22,8 @@ func (this *UserModel) fetch(id string) *UserModel {
 
 func (this *UserModel) create(id int, username, password string) *UserModel {
 	ret := new(UserModel)
-	ret.id = fmt.Sprintf("User_%d", id)
+	ret.realidString = strconv.Itoa(id)
+	ret.id = "User_" + ret.realidString
 	ret.realid = id
 	ret.username = username
 	ret.password = password

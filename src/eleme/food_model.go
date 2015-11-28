@@ -13,10 +13,12 @@ type FoodModel struct {
 	realid int
 	stock int
 	price int
+	realidString string
 	templateString string
 }
 
 var foodpool = list.New()
+var foodrealidmap = map[int] *FoodModel {}
 
 func (this *FoodModel) fetch(id string) *FoodModel {
 	ret := this.MysqlModel.fetch(id)
@@ -26,7 +28,8 @@ func (this *FoodModel) fetch(id string) *FoodModel {
 
 func (this *FoodModel) create(redisConn *redis.Conn, id, stock, price int) *FoodModel {
 	ret := new(FoodModel)
-	ret.id = fmt.Sprintf("Food_%d", id)
+	ret.realidString = strconv.Itoa(id)
+	ret.id = "Food_" + ret.realidString
 	ret.realid = id
 	ret.stock = stock
 	ret.price = price
@@ -34,6 +37,7 @@ func (this *FoodModel) create(redisConn *redis.Conn, id, stock, price int) *Food
 	(*redisConn).Do("SET", "food_stock_of_" + ret.id, strconv.Itoa(stock))
 
 	datapool[ret.id] = ret
+	foodrealidmap[id] = ret
 	foodpool.PushBack(ret)
 
 	ret.templateString = fmt.Sprintf("{\"id\":%d,\"price\":%d,\"stock\":%%s}", id, price)

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"encoding/json"
-	"strconv"
 	"github.com/garyburd/redigo/redis"
 )
 
@@ -54,8 +53,7 @@ func (this *CartModel) addFood(redisConn *redis.Conn, food *FoodModel, count int
 	if this.FoodCount + count > 3 {
 		return "{\"code\":\"FOOD_OUT_OF_LIMIT\",\"message\":\"篮子中食物数量超过了三个\"}"
 	}
-	foodid := strconv.Itoa(food.realid)
-	lastCount, ok := this.FoodIds[foodid]
+	lastCount, ok := this.FoodIds[food.realidString]
 	if !ok { lastCount = 0 }
 	lastCount += count
 	if lastCount < 0 {
@@ -64,7 +62,7 @@ func (this *CartModel) addFood(redisConn *redis.Conn, food *FoodModel, count int
 	if food.reserve(redisConn, count) {
 		this.FoodCount += count
 		this.Total += count * food.price
-		this.FoodIds[foodid] = lastCount
+		this.FoodIds[food.realidString] = lastCount
 	} else {
 		this.IsBadOrder = true
 	}
