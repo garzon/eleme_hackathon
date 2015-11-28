@@ -83,7 +83,7 @@ func Eleme() {
 		var stock int
 		var price int
 		checkErr(rows.Scan(&id, &stock, &price))
-		foodModel.create(redisConn, id, stock, price)
+		foodModel.create(&redisConn, id, stock, price)
 	}
 
 	redisConn.Close()
@@ -124,7 +124,7 @@ func Eleme() {
 		if ret == "" {
 			lock, _ := redis.Int(redisConn.Do("SETNX", "foods_cache_lock", "1"))
 			if lock == 1 {
-				ret = foodModel.dumpAll(redisConn)
+				ret = foodModel.dumpAll(&redisConn)
 				redisConn.Do("PSETEX", "foods_cache", 1300, ret)
 				redisConn.Do("SET", "foods_cache_forever", ret)
 				redisConn.Do("DEL", "foods_cache_lock")
@@ -147,7 +147,8 @@ func Eleme() {
 		userid := auth(w, r)
 		if userid == "" { return }
 		redisConn := redisPool.Get()
-		if userid2orderid(redisConn, userid) != "" {
+		defer redisConn.Close()
+		if userid2orderid(&redisConn, userid) != "" {
 			noContent(w)
 			return
 		}
@@ -161,8 +162,7 @@ func Eleme() {
 			malformedJson(w)
 			return
 		}
-		defer redisConn.Close()
-		cart := cartModel.fetch(redisConn, cartid)
+		cart := cartModel.fetch(&redisConn, cartid)
 		if cart == nil { 
 			cartError(w)
 			return
@@ -176,7 +176,7 @@ func Eleme() {
 			foodError(w)
 			return
 		}
-		err := cart.addFood(redisConn, food, req.Count)
+		err := cart.addFood(&redisConn, food, req.Count)
 		if err == "" {
 			noContent(w)
 			return
@@ -197,12 +197,12 @@ func Eleme() {
 		}
 		redisConn := redisPool.Get()
 		defer redisConn.Close()
-		cart := cartModel.fetch(redisConn, req.CartId)
+		cart := cartModel.fetch(&redisConn, req.CartId)
 		if cart.Userid != userid {
 			cartNotOwned(w)
 			return
 		}
-		ret := cart.makeOrder(redisConn, userid)
+		ret := cart.makeOrder(&redisConn, userid)
 		if ret != "" {
 			customError(w, ret, 403)
 			return
@@ -215,7 +215,7 @@ func Eleme() {
 		userid := auth(w, r)
 		if userid == "" { return }
 		redisConn := redisPool.Get()
-		cart := cartModel.fetch(redisConn, userid2orderid(redisConn, userid))
+		cart := cartModel.fetch(&redisConn, userid2orderid(&redisConn, userid))
 		redisConn.Close()
 		if cart == nil {
 			w.Write([]byte("[]"))
@@ -233,7 +233,7 @@ func Eleme() {
 			return
 		}
 		redisConn := redisPool.Get()
-		ret := cartModel.dumpAll(redisConn)
+		ret := cartModel.dumpAll(&redisConn)
 		redisConn.Close()
 		w.Write([]byte(ret))
 	}))

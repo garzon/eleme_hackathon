@@ -24,14 +24,14 @@ func (this *FoodModel) fetch(id string) *FoodModel {
 	return ret.(*FoodModel)
 }
 
-func (this *FoodModel) create(redisConn redis.Conn, id, stock, price int) *FoodModel {
+func (this *FoodModel) create(redisConn *redis.Conn, id, stock, price int) *FoodModel {
 	ret := new(FoodModel)
 	ret.id = fmt.Sprintf("Food_%d", id)
 	ret.realid = id
 	ret.stock = stock
 	ret.price = price
 
-	redisConn.Do("SET", "food_stock_of_" + ret.id, strconv.Itoa(stock))
+	(*redisConn).Do("SET", "food_stock_of_" + ret.id, strconv.Itoa(stock))
 
 	datapool[ret.id] = ret
 	foodpool.PushBack(ret)
@@ -41,23 +41,23 @@ func (this *FoodModel) create(redisConn redis.Conn, id, stock, price int) *FoodM
 	return ret
 }
 
-func (this *FoodModel) reserve(redisConn redis.Conn,count int) bool {
+func (this *FoodModel) reserve(redisConn *redis.Conn,count int) bool {
 	key := "food_stock_of_" + this.id
-	ret, _ := redis.Int(redisConn.Do("DECRBY", key, count))
+	ret, _ := redis.Int((*redisConn).Do("DECRBY", key, count))
 	if ret < 0 {
-		redisConn.Do("INCRBY", key, count)
+		(*redisConn).Do("INCRBY", key, count)
 		return false
 	} else {
 		return true	
 	}
 }
 
-func (this *FoodModel) dump(redisConn redis.Conn) string {
-	foodStock, _ := redis.String(redisConn.Do("GET", "food_stock_of_" + this.id))
+func (this *FoodModel) dump(redisConn *redis.Conn) string {
+	foodStock, _ := redis.String((*redisConn).Do("GET", "food_stock_of_" + this.id))
 	return fmt.Sprintf(this.templateString, foodStock)
 }
 
-func (this *FoodModel) dumpAll(redisConn redis.Conn) string {
+func (this *FoodModel) dumpAll(redisConn *redis.Conn) string {
 	var buf []string
 	for obj := foodpool.Front(); obj != nil; obj = obj.Next() {
 		buf = append(buf, obj.Value.(*FoodModel).dump(redisConn))

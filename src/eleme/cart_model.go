@@ -17,12 +17,12 @@ type CartModel struct {
 	IsBadOrder bool
 }
 
-func (this *CartModel) save(redisConn redis.Conn) {
+func (this *CartModel) save(redisConn *redis.Conn) {
 	raw, _ := json.Marshal(this)
 	this.saveRawData(redisConn, string(raw))
 }
 
-func (this *CartModel) load(redisConn redis.Conn) bool {
+func (this *CartModel) load(redisConn *redis.Conn) bool {
 	raw := this.loadRawData(redisConn)
 	if raw == "" { return false }
 	json.Unmarshal([]byte(raw), this)
@@ -37,14 +37,14 @@ func createCart(userid string) string {
 	return id
 }
 
-func (this *CartModel) fetch(redisConn redis.Conn, cartid string) *CartModel {
+func (this *CartModel) fetch(redisConn *redis.Conn, cartid string) *CartModel {
 	ret := new(CartModel)
 	ret.Id = cartid
 	if ret.load(redisConn) == false { return nil }
 	return ret
 }
 
-func (this *CartModel) addFood(redisConn redis.Conn, food *FoodModel, count int) string {
+func (this *CartModel) addFood(redisConn *redis.Conn, food *FoodModel, count int) string {
 	/*if this.IsOrder {
 		return "{\"code\":\"ORDER_LOCKED\",\"message\":\"订单已经提交\"}"
 	}*/
@@ -72,16 +72,16 @@ func (this *CartModel) addFood(redisConn redis.Conn, food *FoodModel, count int)
 	return ""
 }
 
-func userid2orderid(redisConn redis.Conn, userid string) string {
-	ret, _ := redis.String(redisConn.Do("GET", "userid2orderid_" + userid))
+func userid2orderid(redisConn *redis.Conn, userid string) string {
+	ret, _ := redis.String((*redisConn).Do("GET", "userid2orderid_" + userid))
 	return ret
 }
 
-func (this *CartModel) makeOrder(redisConn redis.Conn, userid string) string {
+func (this *CartModel) makeOrder(redisConn *redis.Conn, userid string) string {
 	if this.IsBadOrder {
 		return "{\"code\":\"FOOD_OUT_OF_STOCK\",\"message\":\"食物库存不足\"}"
 	}
-	ret, _ := redis.Int(redisConn.Do("SETNX", "userid2orderid_" + userid, this.Id))
+	ret, _ := redis.Int((*redisConn).Do("SETNX", "userid2orderid_" + userid, this.Id))
 	if ret != 1 {
 		return "{\"code\":\"ORDER_OUT_OF_LIMIT\",\"message\":\"每个用户只能下一单\"}"
 	}
@@ -102,7 +102,7 @@ func (this *CartModel) dump() string {
 	return ret
 }
 
-func (this *CartModel) dumpAll(redisConn redis.Conn) string {
+func (this *CartModel) dumpAll(redisConn *redis.Conn) string {
 	var buf []string
 	/*
 	list, _ := redis.Values(redisConn.Do("SMEMBERS", "orders"))
