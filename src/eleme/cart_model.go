@@ -8,7 +8,7 @@ import (
 )
 
 type CartModel struct {
-	DataModel
+	Id string
 	Userid string
 	FoodIds map[string] int
 	FoodCount int
@@ -18,25 +18,18 @@ type CartModel struct {
 
 func (this *CartModel) save(redisConn *redis.Conn) {
 	raw, _ := json.Marshal(this)
-	this.saveRawData(redisConn, string(raw))
+	(*redisConn).Do("SET", this.Id, string(raw))
 }
 
 func (this *CartModel) load(redisConn *redis.Conn) bool {
-	raw := this.loadRawData(redisConn)
+	raw, _ := redis.String((*redisConn).Do("GET", this.Id))
 	if raw == "" { return false }
 	json.Unmarshal([]byte(raw), this)
 	return true
 }
 
 func createCart(userid, cartid string) *CartModel {
-	cart := new(CartModel)
-	cart.Id = cartid
-	cart.Userid = userid
-	cart.FoodIds = map[string] int{}
-	cart.FoodCount = 0
-	cart.Total = 0
-	cart.IsBadOrder = false
-	return cart
+	return &CartModel{cartid, userid, map[string]int{}, 0, 0, false}
 }
 
 func (this *CartModel) fetch(redisConn *redis.Conn, cartid string) *CartModel {
