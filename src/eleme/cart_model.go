@@ -13,7 +13,6 @@ type CartModel struct {
 	FoodIds map[string] int
 	FoodCount int
 	Total int
-	IsBadOrder bool
 }
 
 func (this *CartModel) save(redisConn *redis.Conn) {
@@ -29,7 +28,7 @@ func (this *CartModel) load(redisConn *redis.Conn) bool {
 }
 
 func createCart(userid, cartid string) *CartModel {
-	return &CartModel{cartid, userid, map[string]int{}, 0, 0, false}
+	return &CartModel{cartid, userid, map[string]int{}, 0, 0}
 }
 
 func (this *CartModel) fetch(redisConn *redis.Conn, cartid string) *CartModel {
@@ -39,31 +38,21 @@ func (this *CartModel) fetch(redisConn *redis.Conn, cartid string) *CartModel {
 	return ret
 }
 
-func (this *CartModel) addFood(redisConn *redis.Conn, food *FoodModel, count int) string {
-	/*if this.IsOrder {
-		return "{\"code\":\"ORDER_LOCKED\",\"message\":\"订单已经提交\"}"
-	}*/
-	if this.IsBadOrder {
-		return ""
-	}
-	if this.FoodCount + count > 3 {
-		return "{\"code\":\"FOOD_OUT_OF_LIMIT\",\"message\":\"篮子中食物数量超过了三个\"}"
-	}
+func (this *CartModel) addFood(redisConn *redis.Conn, food *FoodModel, count int) {
 	lastCount, ok := this.FoodIds[food.realidString]
 	if !ok { lastCount = 0 }
 	lastCount += count
 	if lastCount < 0 {
-		return ""
+		return
 	}
 	if food.reserve(redisConn, count) {
 		this.FoodCount += count
 		this.Total += count * food.price
 		this.FoodIds[food.realidString] = lastCount
+		this.save(redisConn)
 	} else {
-		this.IsBadOrder = true
+		(*redisConn).Do("SET", this.Id + "_is_bad_order", "1")
 	}
-	this.save(redisConn)
-	return ""
 }
 
 func userid2orderid(redisConn *redis.Conn, userid string) string {
@@ -71,11 +60,12 @@ func userid2orderid(redisConn *redis.Conn, userid string) string {
 	return ret
 }
 
-func (this *CartModel) makeOrder(redisConn *redis.Conn, userid string) string {
-	if this.IsBadOrder {
+func makeOrder(redisConn *redis.Conn, cartid, userid string) string {
+	isbadorder, _ := redis.String((*redisConn).Do("GET", cartid + "_is_bad_order"))
+	if isbadorder == "1" {
 		return "{\"code\":\"FOOD_OUT_OF_STOCK\",\"message\":\"食物库存不足\"}"
 	}
-	ret, _ := redis.Int((*redisConn).Do("SETNX", "userid2orderid_" + userid, this.Id))
+	ret, _ := redis.Int((*redisConn).Do("SETNX", "userid2orderid_" + userid, cartid))
 	if ret != 1 {
 		return "{\"code\":\"ORDER_OUT_OF_LIMIT\",\"message\":\"每个用户只能下一单\"}"
 	}
@@ -90,7 +80,7 @@ func (this *CartModel) dump() string {
 	for id, count := range this.FoodIds {
 		buf = append(buf, fmt.Sprintf("{\"food_id\":%s,\"count\":%d}", id, count))
 	}
-	ret := fmt.Sprintf("{\"id\":\"" + this.Id + "\",\"user_id\":" + this.Userid[5:] + ",")
+	ret := "{\"id\":\"" + this.Id + "\",\"user_id\":" + this.Userid[5:] + ","
 	ret += "\"items\":[" + strings.Join(buf, ",") + "],"
 	ret += fmt.Sprintf("\"total\":%d}", this.Total)
 	return ret
@@ -107,7 +97,12 @@ func (this *CartModel) dumpAll(redisConn *redis.Conn) string {
 	for _, user := range username2user {
 		orderId := userid2orderid(redisConn, user.id)
 		if orderId != "" {
-			buf = append(buf, cartModel.fetch(redisConn, orderId).dump())
+			cart := cartModel.fetch(redisConn, orderId)
+			if cart != nil {
+				buf = append(buf, cart.dump())
+			} else {
+				buf = append(buf, "{\"id\":\"" + this.Id + "\",\"user_id\":" + this.Userid[5:] + ",\"items\":[],\"total\":0}")
+			}
 		}
 	}
 	return "[" + strings.Join(buf, ",") + "]"

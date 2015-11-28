@@ -179,12 +179,12 @@ func Eleme() {
 			foodError(w)
 			return
 		}
-		err := cart.addFood(&redisConn, food, req.Count)
-		if err == "" {
-			noContent(w)
-			return
+		if cart.FoodCount + req.Count > 3 {
+			customError(w, "{\"code\":\"FOOD_OUT_OF_LIMIT\",\"message\":\"篮子中食物数量超过了三个\"}", 403)
+			return 
 		}
-		customError(w, err, 403)
+		cart.addFood(&redisConn, food, req.Count)
+		noContent(w)
 	}))
 
 	mux.Post("/orders", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -203,24 +203,20 @@ func Eleme() {
 			return
 		}
 		redisConn := redisPool.Get()
-		defer redisConn.Close()
-		cart := cartModel.fetch(&redisConn, req.CartId)
-		if cart == nil {
-			cart = createCart(userid, req.CartId)
-			cart.save(&redisConn)
-		}
-		ret := cart.makeOrder(&redisConn, userid)
+		ret := makeOrder(&redisConn, req.CartId, userid)
+		redisConn.Close()
 		if ret != "" {
 			customError(w, ret, 403)
 			return
 		}
-		w.Write([]byte("{\"id\":\"" + cart.Id +  "\"}"))
+		w.Write([]byte("{\"id\":\"" + req.CartId +  "\"}"))
 	}))
 
 	// not important
 	mux.Get("/orders", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userid := auth(w, r)
 		if userid == "" { return }
+		//time.Sleep(1000)
 		redisConn := redisPool.Get()
 		cart := cartModel.fetch(&redisConn, userid2orderid(&redisConn, userid))
 		redisConn.Close()
