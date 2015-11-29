@@ -1,7 +1,6 @@
 package eleme
 
 import "net/http"
-import "github.com/garyburd/redigo/redis"
 import "encoding/json"
 
 type MyMux struct {
@@ -34,21 +33,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 func foodsHandler(w http.ResponseWriter, r *http.Request) {
 	userid := auth(w, r)
 	if userid == "" { return }
-	redisConn := redisPool.Get()
-	ret, _ := redis.String(redisConn.Do("GET", "foods_cache"))
-	if ret == "" {
-		lock, _ := redis.Int(redisConn.Do("SETNX", "foods_cache_lock", "1"))
-		if lock == 1 {
-			ret = foodModel.dumpAll(&redisConn)
-			redisConn.Do("PSETEX", "foods_cache", 1300, ret)
-			redisConn.Do("SET", "foods_cache_forever", ret)
-			redisConn.Do("DEL", "foods_cache_lock")
-		} else {
-			ret, _ = redis.String(redisConn.Do("GET", "foods_cache_forever"))
-		}
-	}
-	go redisConn.Close()
-	w.Write([]byte(ret))
+	w.Write(food_cache)
 }
 
 func createCartHandler(w http.ResponseWriter, r *http.Request) {
