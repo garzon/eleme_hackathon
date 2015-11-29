@@ -47,7 +47,7 @@ func foodsHandler(w http.ResponseWriter, r *http.Request) {
 			ret, _ = redis.String(redisConn.Do("GET", "foods_cache_forever"))
 		}
 	}
-	redisConn.Close()
+	go redisConn.Close()
 	w.Write([]byte(ret))
 }
 
@@ -92,8 +92,8 @@ func addFoodHandler(w http.ResponseWriter, r *http.Request, cartid string) {
 		customError(w, "{\"code\":\"FOOD_OUT_OF_LIMIT\",\"message\":\"篮子中食物数量超过了三个\"}", 403)
 		return 
 	}
-	cart.addFood(&redisConn, food, req.Count)
 	noContent(w)
+	cart.addFood(&redisConn, food, req.Count)
 }
 
 func makeOrderHandler(w http.ResponseWriter, r *http.Request) {
