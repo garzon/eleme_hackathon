@@ -45,6 +45,8 @@ func checkErr(err error) {
 }
 
 var food_cache []byte
+var is_bad_order map[string] bool = map[string] bool {}
+var userid_to_orderid map[string] string = map[string] string{}
 
 func Eleme() {
 	host := getEnv("APP_HOST", "localhost")
@@ -90,7 +92,23 @@ func Eleme() {
 
 	food_cache = []byte(foodModel.dumpAll(&redisConn))
 
-	redisConn.Close()
+	defer redisConn.Close()
+
+	psc := redis.PubSubConn{Conn: redisConn}
+
+	psc.Subscribe("bad_order")
+
+	go func() {
+		for {
+			switch n := psc.Receive().(type) {
+			case redis.Message:
+				switch n.Channel {
+				case "bad_order":
+					is_bad_order[string(n.Data)] = true
+				}
+			}
+		}
+	}()
 
 	/*go func() {
 		for {

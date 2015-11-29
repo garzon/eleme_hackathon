@@ -51,7 +51,7 @@ func (this *CartModel) addFood(redisConn *redis.Conn, food *FoodModel, count int
 		this.FoodIds[food.realidString] = lastCount
 		this.save(redisConn)
 	} else {
-		(*redisConn).Do("SET", this.Id + "_is_bad_order", "1")
+		(*redisConn).Do("PUBLISH", "bad_order", this.Id)
 	}
 }
 
@@ -61,8 +61,8 @@ func userid2orderid(redisConn *redis.Conn, userid string) string {
 }
 
 func makeOrder(redisConn *redis.Conn, cartid, userid string) string {
-	isbadorder, _ := redis.String((*redisConn).Do("GET", cartid + "_is_bad_order"))
-	if isbadorder == "1" {
+	_, isbadorder := is_bad_order[cartid]
+	if isbadorder {
 		return "{\"code\":\"FOOD_OUT_OF_STOCK\",\"message\":\"食物库存不足\"}"
 	}
 	ret, _ := redis.Int((*redisConn).Do("SETNX", "userid2orderid_" + userid, cartid))
