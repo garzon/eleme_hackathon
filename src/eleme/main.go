@@ -86,25 +86,27 @@ func Eleme() {
 		foodModel.create(&redisConn, id, stock, price)
 	}
 
-	defer redisConn.Close()
-
 	addr := fmt.Sprintf("%s:%s", host, port)
 
 	food_cache = []byte(foodModel.dumpAll(&redisConn))
 
-	go func() {
-		time.Sleep(1300 * time.Millisecond)
-		lock, _ := redis.Int(redisConn.Do("SETNX", "foods_cache_lock", "1"))
-		ret := ""
-		if lock == 1 {
-			ret = foodModel.dumpAll(&redisConn)
-			redisConn.Do("SET", "foods_cache", ret)
-			redisConn.Do("DEL", "foods_cache_lock")
-		} else {
-			ret, _ = redis.String(redisConn.Do("GET", "foods_cache"))
+	redisConn.Close()
+
+	/*go func() {
+		for {
+			time.Sleep(1300 * time.Millisecond)
+			lock, _ := redis.Int(redisConn.Do("SETNX", "foods_cache_lock", "1"))
+			ret := ""
+			if lock == 1 {
+				ret = foodModel.dumpAll(&redisConn)
+				redisConn.Do("SET", "foods_cache", ret)
+				redisConn.Do("DEL", "foods_cache_lock")
+			} else {
+				ret, _ = redis.String(redisConn.Do("GET", "foods_cache"))
+			}
+			food_cache = []byte(ret)
 		}
-		food_cache = []byte(ret)
-	}()
+	}()*/
 
 	mux := &MyMux{}
 	http.ListenAndServe(addr, mux)
