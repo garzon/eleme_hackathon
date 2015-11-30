@@ -90,11 +90,12 @@ func Eleme() {
 
 	food_cache = []byte(foodModel.dumpAll(&redisConn))
 
-	redisConn.Close()
+	defer redisConn.Close()
 
-	/*go func() {
+	// use a gorouting to update the food cache in the background
+	go func() {
 		for {
-			time.Sleep(1300 * time.Millisecond)
+			time.Sleep(2500 * time.Millisecond)
 			lock, _ := redis.Int(redisConn.Do("SETNX", "foods_cache_lock", "1"))
 			ret := ""
 			if lock == 1 {
@@ -106,7 +107,7 @@ func Eleme() {
 			}
 			food_cache = []byte(ret)
 		}
-	}()*/
+	}()
 
 	mux := &MyMux{}
 	http.ListenAndServe(addr, mux)

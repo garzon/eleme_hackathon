@@ -45,6 +45,10 @@ func createCartHandler(w http.ResponseWriter, r *http.Request) {
 func addFoodHandler(w http.ResponseWriter, r *http.Request, cartid string) {
 	userid := auth(w, r)
 	if userid == "" { return }
+	if len(cartid) < 16 {
+		cartError(w)
+		return
+	}
 	redisConn := redisPool.Get()
 	defer redisConn.Close()
 	if userid2orderid(&redisConn, userid) != "" {
@@ -134,7 +138,7 @@ func adminOrderHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(ret))
 }
 
-
+// a home-made mux to improve performance
 func (this *MyMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	path6 := path[:6]
@@ -150,11 +154,14 @@ func (this *MyMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			createCartHandler(w, r)
 		} else {
-			if len(path) < 23 {
-				cartError(w)
-				return
+			var cartid string
+			pathLen := len(path)
+			if pathLen < 23 {
+				cartid = path[7:pathLen]
+			} else {
+				cartid = path[7:23]
 			}
-			addFoodHandler(w, r, path[7:23])
+			addFoodHandler(w, r, cartid)
 		}
 		return
 	}
