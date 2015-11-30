@@ -49,12 +49,6 @@ func addFoodHandler(w http.ResponseWriter, r *http.Request, cartid string) {
 		cartError(w)
 		return
 	}
-	redisConn := redisPool.Get()
-	defer redisConn.Close()
-	if userid2orderid(&redisConn, userid) != "" {
-		noContent(w)
-		return
-	}
 	decoder := json.NewDecoder(r.Body)
 	var req struct {
 		FoodId int `json:"food_id"`
@@ -68,21 +62,18 @@ func addFoodHandler(w http.ResponseWriter, r *http.Request, cartid string) {
 		cartNotOwned(w)
 		return
 	}
-	cart := cartModel.fetch(&redisConn, cartid)
-	if cart == nil {
-		cart = createCart(userid, cartid)
-	}
 	food, ok := foodrealidmap[req.FoodId]
 	if !ok {
 		foodError(w)
 		return
 	}
-	if cart.FoodCount + req.Count > 3 {
+	redisConn := redisPool.Get()
+	defer redisConn.Close()
+	if addFood(&redisConn, cartid, userid, food, req.Count) == "1" {
 		customError(w, "{\"code\":\"FOOD_OUT_OF_LIMIT\",\"message\":\"篮子中食物数量超过了三个\"}", 403)
 		return 
 	}
 	noContent(w)
-	cart.addFood(&redisConn, food, req.Count)
 }
 
 func makeOrderHandler(w http.ResponseWriter, r *http.Request) {

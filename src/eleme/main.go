@@ -46,6 +46,9 @@ func checkErr(err error) {
 
 var food_cache []byte
 
+var add_food_script_sha1 string
+var make_order_script_sha1 string
+
 func Eleme() {
 	host := getEnv("APP_HOST", "localhost")
 	port := getEnv("APP_PORT", "8080")
@@ -89,6 +92,74 @@ func Eleme() {
 	addr := fmt.Sprintf("%s:%s", host, port)
 
 	food_cache = []byte(foodModel.dumpAll(&redisConn))
+
+	empty_cart := createCart("", "empty_cart")
+	empty_cart.save(&redisConn)
+
+// using redis lua script to reduce the number of tcp connection to redis
+	add_food_script := `
+if redis.call("GET", KEYS[5]) ~= false then
+  return "0"
+end
+local cart = redis.call("GET", KEYS[1])
+local flag = true
+if cart == false then
+  cart = redis.call("GET", KEYS[3])
+  flag = false
+end
+local cart_obj = cjson.decode(cart)
+if flag == false then
+  cart_obj['Id'] = KEYS[1]
+  cart_obj['Userid'] = ARGV[1]
+end
+if cart_obj['FoodCount'] + ARGV[3] > 3 then
+  if flag == false then
+    redis.call("SET", KEYS[1], cjson.encode(cart_obj))
+  end
+  return "1"
+end
+local old_num = 0
+if cart_obj['FoodIds'][ARGV[2]] ~= nil then
+  old_num = cart_obj['FoodIds'][ARGV[2]]
+end
+old_num = old_num + ARGV[3]
+if old_num < 0 then
+  if flag == false then
+    redis.call("SET", KEYS[1], cjson.encode(cart_obj))
+  end
+  return "0"
+end
+if redis.call("DECRBY", KEYS[2], ARGV[3]) < 0 then
+  redis.call("INCRBY", KEYS[2], ARGV[3])
+  if flag == false then
+    redis.call("SET", KEYS[1], cjson.encode(cart_obj))
+  end
+  redis.call("SET", KEYS[4], "1")
+  return "0"
+end
+cart_obj['FoodIds'][ARGV[2]] = old_num
+cart_obj['FoodCount'] = cart_obj['FoodCount'] + ARGV[3]
+cart_obj['Total'] = cart_obj['Total'] + ARGV[3] * ARGV[4]
+redis.call("SET", KEYS[1], cjson.encode(cart_obj))
+return "0"
+`
+
+	make_order_script := `
+if redis.call("GET", KEYS[1]) ~= false then
+  return "1"
+end
+local ret = redis.call("SETNX", KEYS[2], ARGV[1])
+if ret ~= 1 then
+  return "2"
+end
+return "0"
+`
+
+	add_food_script_sha1, err = redis.String(redisConn.Do("SCRIPT", "LOAD", add_food_script))
+	checkErr(err)
+
+	make_order_script_sha1, err = redis.String(redisConn.Do("SCRIPT", "LOAD", make_order_script))
+	checkErr(err)
 
 	defer redisConn.Close()
 
